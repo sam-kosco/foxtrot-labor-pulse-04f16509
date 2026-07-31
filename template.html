@@ -3,28 +3,13 @@
 <meta name="robots" content="noindex, nofollow, noarchive">
 <title>Foxtrot Labor Pulse</title>
 <style>
+/* Light-only, matching the ERP — the viewer's OS dark mode is intentionally ignored */
 :root{
+  color-scheme: light;
   --navy:#0f2238; --navy2:#16314f; --orange:#f07f1b; --ink:#0c1a2b;
   --paper:#f4f6f9; --surface:#ffffff; --muted:#7e8aa0; --line:#e2e7ef;
   --good:#1f9d57; --bad:#d2453b; --rowtint:#fbfcfe; --headtxt:#c7d2e2;
   --future:#a9b4c6; --tipbg:#0f2238; --tiptx:#ffffff;
-}
-@media (prefers-color-scheme: dark){
-  :root{
-    --ink:#e6ebf3; --paper:#0b1626; --surface:#132238; --muted:#8fa0b8;
-    --line:#24374f; --rowtint:#16273d; --future:#5c6c82;
-    --tipbg:#e6ebf3; --tiptx:#0f2238;
-  }
-}
-:root[data-theme="dark"]{
-  --ink:#e6ebf3; --paper:#0b1626; --surface:#132238; --muted:#8fa0b8;
-  --line:#24374f; --rowtint:#16273d; --future:#5c6c82;
-  --tipbg:#e6ebf3; --tiptx:#0f2238;
-}
-:root[data-theme="light"]{
-  --ink:#0c1a2b; --paper:#f4f6f9; --surface:#ffffff; --muted:#7e8aa0;
-  --line:#e2e7ef; --rowtint:#fbfcfe; --future:#a9b4c6;
-  --tipbg:#0f2238; --tiptx:#ffffff;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);
@@ -34,7 +19,7 @@ body{margin:0;background:var(--paper);color:var(--ink);
 .brand{font-size:19px;font-weight:800;letter-spacing:.01em}
 .brand span{color:var(--orange)}
 .topmeta{margin-left:auto;font-size:12px;color:#9fb0c8;text-align:right;line-height:1.35}
-.wrap{max-width:1180px;margin:0 auto;padding:22px 22px 60px}
+.wrap{width:min(92%,96vw);margin:0 auto;padding:22px 0 60px}
 h2{color:var(--ink);font-size:22px;font-weight:800;margin:0}
 h2 .sub{color:var(--muted);font-weight:600;font-size:14px}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0 18px}
@@ -101,8 +86,6 @@ select:focus{outline:none;border-color:var(--orange)}
   align-items:center;border-bottom:1px solid var(--line);cursor:pointer}
 .ovrow:last-child{border-bottom:0}
 .ovrow:hover{background:#fff3e6}
-:root[data-theme="dark"] .ovrow:hover{background:#2a3549}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ovrow:hover{background:#2a3549} }
 .ovrow.head{background:var(--navy);color:#fff;font-weight:700;font-size:12px;cursor:default}
 .ovrow.head:hover{background:var(--navy)}
 .ovrow .cell{border-bottom:0;background:transparent}
@@ -114,9 +97,8 @@ select:focus{outline:none;border-color:var(--orange)}
   box-shadow:0 8px 24px #0006;display:none}
 #tip .t-hd{font-weight:700;margin-bottom:2px}
 #tip .t-tot{font-weight:700;border-top:1px solid #ffffff33;margin-top:4px;padding-top:4px}
-:root[data-theme="dark"] #tip .t-tot{border-top-color:#0f223833}
 @media(max-width:640px){
-  .wrap{padding:14px 10px 50px}
+  .wrap{width:94%;padding:14px 0 50px}
   .topbar{padding:0 14px}
   .kpi{min-width:130px;padding:11px 14px;flex:1 1 40%}
   .kpi-val{font-size:21px}
