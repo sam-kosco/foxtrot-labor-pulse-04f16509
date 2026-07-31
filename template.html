@@ -19,7 +19,7 @@ body{margin:0;background:var(--paper);color:var(--ink);
 .brand{font-size:19px;font-weight:800;letter-spacing:.01em}
 .brand span{color:var(--orange)}
 .topmeta{margin-left:auto;font-size:12px;color:#9fb0c8;text-align:right;line-height:1.35}
-.wrap{width:min(92%,96vw);margin:0 auto;padding:22px 0 60px}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 22px 60px}
 h2{color:var(--ink);font-size:22px;font-weight:800;margin:0}
 h2 .sub{color:var(--muted);font-weight:600;font-size:14px}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0 18px}
@@ -98,7 +98,7 @@ select:focus{outline:none;border-color:var(--orange)}
 #tip .t-hd{font-weight:700;margin-bottom:2px}
 #tip .t-tot{font-weight:700;border-top:1px solid #ffffff33;margin-top:4px;padding-top:4px}
 @media(max-width:640px){
-  .wrap{width:94%;padding:14px 0 50px}
+  .wrap{padding:14px 10px 50px}
   .topbar{padding:0 14px}
   .kpi{min-width:130px;padding:11px 14px;flex:1 1 40%}
   .kpi-val{font-size:21px}
@@ -304,6 +304,13 @@ function renderControls(){
       aria-selected="${i===curMonth}">${m.label}</button>`).join("");
 }
 
+// Scale the page so the 1180px layout fills ~92% of the screen (150% on a
+// 1920px monitor) — same effect as browser zoom. Phones stay 1:1.
+function pageZoom(){ return Math.max(1, 0.92 * innerWidth / 1180); }
+function applyZoom(){ document.body.style.zoom = pageZoom(); }
+applyZoom();
+window.addEventListener("resize", applyZoom);
+
 $("#gen").textContent = DATA.generated;
 renderControls(); render();
 
@@ -335,11 +342,15 @@ function showTip(el){
     Hourly punches: <b>${fmt(h)} h</b><br>
     Salaried: ${n} ${n===1?"person":"people"} &times; 5.71 h = <b>${fmt(sal)} h</b>
     <div class="t-tot">Total ${fmt(h+sal)} h</div>`;
-  const r = el.getBoundingClientRect();
+  // getBoundingClientRect is in visual px; the zoomed body positions fixed
+  // elements in layout px — divide by the zoom factor to convert
+  const Z = pageZoom(), r = el.getBoundingClientRect(),
+        rl = r.left/Z, rt = r.top/Z, rb = r.bottom/Z, rw = r.width/Z,
+        vw = innerWidth/Z;
   tip.style.display = "block";
   const tw = tip.offsetWidth, th = tip.offsetHeight;
-  let x = Math.min(Math.max(8, r.left + r.width/2 - tw/2), innerWidth - tw - 8);
-  let y = r.top - th - 8; if (y < 66) y = r.bottom + 8;
+  let x = Math.min(Math.max(8, rl + rw/2 - tw/2), vw - tw - 8);
+  let y = rt - th - 8; if (y < 66) y = rb + 8;
   tip.style.left = x+"px"; tip.style.top = y+"px";
 }
 function hideTip(){ tip.style.display="none"; }
