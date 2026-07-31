@@ -20,11 +20,12 @@ import pandas as pd
 HERE = Path(__file__).parent
 if os.environ.get("PULSE_DATA_DIR"):
     # CI mode: fetch_sources.py has downloaded everything into one flat dir
-    DEBRIEFS = PAYLOCITY = Path(os.environ["PULSE_DATA_DIR"])
+    DEBRIEFS = PAYLOCITY = LOCMGMT_DIR = Path(os.environ["PULSE_DATA_DIR"])
 else:
     DH = Path(r"C:\Users\samko\Foxtrot Aviation Services\Data Hub - Documents")
     DEBRIEFS = DH / "Power Flows" / "Debriefs"
     PAYLOCITY = DH / "Paylocity Reports"
+    LOCMGMT_DIR = DH / "Power BI Data Sources"
 WINDOW_START = date(2026, 5, 1)  # same cutoff the workbook queries hardcode
 EXCLUDED_TITLES = {"Director", "Regional Director", "Regional Manager II"}
 TODAY = date.today()
@@ -174,6 +175,20 @@ def load_frontier():
 
 
 # ---------------------------------------------------------------- paylocity
+
+def load_managers(station_names):
+    """Airport code (first 3 letters, both sides) → managers, per Location
+    Management.csv. A station lands in every matching manager's group."""
+    m = pd.read_csv(LOCMGMT_DIR / "Location Management.csv", dtype=str,
+                    encoding="utf-8-sig")
+    by_code = {}
+    for loc, mgr in zip(m["Location"], m["Manager"]):
+        if pd.isna(loc) or pd.isna(mgr):
+            continue
+        by_code.setdefault(loc.strip()[:3].upper(), set()).add(mgr.strip())
+    return {st: sorted(by_code.get(st.strip()[:3].upper(), set()))
+            for st in station_names}
+
 
 def load_employees():
     e = pd.read_csv(PAYLOCITY / "Basic Employee Info.csv", dtype=str, encoding="cp1252")
@@ -384,6 +399,7 @@ def main():
         "generated": datetime.now().strftime("%b %d, %Y %I:%M %p"),
         "months": months,
         "station_names": list(stations.keys()),
+        "managers": load_managers(stations.keys()),
     }
     (HERE / "pulse_data.json").write_text(json.dumps(data))
     print(f"wrote pulse_data.json ({(HERE / 'pulse_data.json').stat().st_size // 1024} KB, "

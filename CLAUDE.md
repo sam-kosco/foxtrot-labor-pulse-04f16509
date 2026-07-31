@@ -8,7 +8,7 @@ The page is intentionally uneditable: ops get a link, not the workbook. The repo
 ## How it works
 
 1. `.github/workflows/refresh.yml` runs daily (dual cron 13:00/14:00 UTC; a guard step lets only the 9 AM America/New_York run proceed, handling DST) plus manual dispatch.
-2. `fetch_sources.py` downloads the 9 source files from the Data Hub SharePoint drive via Microsoft Graph (client credentials — same Foxtrot Report Automation app and drive ID as the compliance trackers).
+2. `fetch_sources.py` downloads the 10 source files from the Data Hub SharePoint drive via Microsoft Graph (client credentials — same Foxtrot Report Automation app and drive ID as the compliance trackers).
 3. `build_pulse.py` reproduces the workbook's full calculation chain from those sources (the workbook itself is never read) and renders `index.html` from `template.html` with the data embedded.
 4. The workflow commits `index.html` + `pulse_data.json`; GitHub Pages serves it.
 
@@ -20,6 +20,7 @@ The page is intentionally uneditable: ops get a link, not the workbook. The repo
 - `stations.json` is the per-station config **auto-derived from the workbook's formulas** by `extract_config.py` (local-only script; needs the synced Data Hub folder). Re-run it and commit if stations, services, rates, or labor-dist keys change in the workbook.
 - The build intentionally **fixes four workbook bugs**: CMH counting LIT's Envoy aircraft (days 2–31), IAH budget rates shifted one row, BDL week-4 hardcoded rates, FLL/TUS FAC days 29–31 pulling MLB FAC's worked hours. Expect those cells to differ from Excel until the workbook is fixed.
 - Data window starts 2026-05-01 (`WINDOW_START`), mirroring the hardcoded cutoff in the workbook's M queries.
+- **Master page** ("All Locations — Overview", the default landing view): company-wide MTD KPIs, a per-station table, and By Regional Manager groups. Manager mapping comes from `Power BI Data Sources/Location Management.csv`, matched **blindly on the first 3 letters** of the location on both sides (the airport code) — per the owner's instruction. A location with multiple managers in the CSV appears under each of them, so manager totals overlap and do not sum to the company total.
 
 ## Secrets
 

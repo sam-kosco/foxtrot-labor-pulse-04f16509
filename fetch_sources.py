@@ -27,6 +27,7 @@ FILES = [
     "Power Flows/Debriefs/Breeze Debriefs.xlsx",
     "Power Flows/Debriefs/Ultra Debriefs.xlsx",
     "Power Flows/Debriefs/Frontier Debriefs.xlsx",
+    "Power BI Data Sources/Location Management.csv",
 ]
 
 OUT = Path(__file__).parent / "sources"

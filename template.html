@@ -91,6 +91,24 @@ select:focus{outline:none;border-color:var(--orange)}
   border-radius:9px;padding:10px 14px;font-size:12.5px;line-height:1.65;color:var(--ink)}
 .note b{color:var(--orange);filter:brightness(.85)}
 .note p{margin:4px 0}
+.ovtable{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;margin-bottom:16px}
+.ovhd{background:var(--navy2);color:#fff;font-weight:700;font-size:12.5px;
+  padding:9px 14px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.ovhd .sub{color:#c7d2e2;font-weight:600}
+.ovbody{min-width:520px}
+.ovrow{display:grid;grid-template-columns:minmax(120px,1.6fr) 1fr 1fr minmax(150px,1.3fr);
+  align-items:center;border-bottom:1px solid var(--line);cursor:pointer}
+.ovrow:last-child{border-bottom:0}
+.ovrow:hover{background:#fff3e6}
+:root[data-theme="dark"] .ovrow:hover{background:#2a3549}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ovrow:hover{background:#2a3549} }
+.ovrow.head{background:var(--navy);color:#fff;font-weight:700;font-size:12px;cursor:default}
+.ovrow.head:hover{background:var(--navy)}
+.ovrow .cell{border-bottom:0;background:transparent}
+.ovrow .cell.name{position:static}
+.sec{font-size:15px;font-weight:800;color:var(--ink);margin:22px 0 10px}
+.sec .sub{color:var(--muted);font-weight:600;font-size:12.5px}
 #tip{position:fixed;z-index:99;background:var(--tipbg);color:var(--tiptx);border-radius:9px;
   padding:9px 12px;font-size:12.5px;line-height:1.55;max-width:270px;pointer-events:none;
   box-shadow:0 8px 24px #0006;display:none}
@@ -146,16 +164,82 @@ const fmt = (v, dp=1) => v==null ? "—" :
   Number(v).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:dp});
 const DOW = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
-let curMonth = DATA.months.length-1, curStation = DATA.station_names[0];
+const ALL = "__ALL__";
+let curMonth = DATA.months.length-1, curStation = ALL;
 const saved = sessionStorage.getItem("pulse-station");
-if (saved && DATA.station_names.includes(saved)) curStation = saved;
+if (saved && (DATA.station_names.includes(saved) || saved === ALL)) curStation = saved;
 
 function variBadge(pct, over){
   if (pct==null) return '<span class="badge na">no data</span>';
   return `<span class="badge ${over?'over':'under'}">${pct}% ${over?'Over':'Under'} Budget</span>`;
 }
 
+function mtdOf(M, names){
+  let b = 0, w = 0;
+  names.forEach(n => { b += M.stations[n].mtd.budgeted; w += M.stations[n].mtd.worked; });
+  return { budgeted: b, worked: w,
+           variance: b ? Math.round(Math.abs(1 - w/b) * 100) : null,
+           over: b ? w > b : null };
+}
+
+function ovRows(M, names){
+  const head = `<div class="ovrow head"><div class="cell name">Station</div>
+    <div class="cell num">Budgeted MTD</div><div class="cell num">Worked MTD</div>
+    <div class="cell num">Variance</div></div>`;
+  const rows = names.map(n => {
+    const t = M.stations[n].mtd;
+    return `<div class="ovrow" data-st="${n}" role="button" tabindex="0">
+      <div class="cell name">${n}</div>
+      <div class="cell num">${fmt(t.budgeted)}</div>
+      <div class="cell num">${fmt(t.worked)}</div>
+      <div class="cell num">${variBadge(t.variance, t.over)}</div></div>`;
+  }).join("");
+  return `<div class="scroller"><div class="ovbody">${head}${rows}</div></div>`;
+}
+
+function renderOverview(){
+  const M = DATA.months[curMonth];
+  const names = DATA.station_names;
+  $("#title").innerHTML = `All Locations Labor Pulse <span class="sub">&middot; ${M.label}</span>`;
+  const tot = mtdOf(M, names);
+  const nOver = names.filter(n => M.stations[n].mtd.over).length;
+  $("#kpis").innerHTML = `
+    <div class="kpi"><div class="kpi-label">Budgeted hours &middot; MTD</div>
+      <div class="kpi-val">${fmt(tot.budgeted)}</div>
+      <div class="kpi-sub">all ${names.length} locations</div></div>
+    <div class="kpi"><div class="kpi-label">Worked hours &middot; MTD</div>
+      <div class="kpi-val">${fmt(tot.worked)}</div>
+      <div class="kpi-sub">punched + salaried</div></div>
+    <div class="kpi"><div class="kpi-label">Company variance</div>
+      <div class="kpi-val" style="font-size:18px;padding-top:6px">${variBadge(tot.variance, tot.over)}</div>
+      <div class="kpi-sub">worked vs budgeted</div></div>
+    <div class="kpi"><div class="kpi-label">Over budget</div>
+      <div class="kpi-val ${nOver ? "neg" : "pos"}">${nOver}</div>
+      <div class="kpi-sub">of ${names.length} locations</div></div>`;
+
+  let html = `<div class="sec">All locations <span class="sub">&middot; click a row for the daily detail</span></div>
+    <div class="ovtable">${ovRows(M, names)}</div>
+    <div class="sec">By Regional Manager <span class="sub">&middot; airport code match, a location can report to more than one manager</span></div>`;
+  const mgrs = {};
+  names.forEach(n => (DATA.managers[n] || []).forEach(m => (mgrs[m] = mgrs[m] || []).push(n)));
+  Object.keys(mgrs).sort().forEach(mgr => {
+    const t = mtdOf(M, mgrs[mgr]);
+    html += `<div class="ovtable">
+      <div class="ovhd">${mgr}
+        <span class="sub">${mgrs[mgr].length} location${mgrs[mgr].length>1?"s":""}</span>
+        <span class="sub">Budgeted <b>${fmt(t.budgeted)}</b></span>
+        <span class="sub">Worked <b>${fmt(t.worked)}</b></span>
+        ${variBadge(t.variance, t.over)}</div>
+      ${ovRows(M, mgrs[mgr])}</div>`;
+  });
+  $("#weeks").innerHTML = html;
+  $("#rates").innerHTML = "";
+  $("#rates").style.display = "none";
+}
+
 function render(){
+  if (curStation === ALL){ renderOverview(); return; }
+  $("#rates").style.display = "";
   const M = DATA.months[curMonth], S = M.stations[curStation];
   const elapsed = S.elapsed_through;
   $("#title").innerHTML = `${curStation} Labor Pulse <span class="sub">&middot; ${M.label}</span>`;
@@ -229,7 +313,9 @@ function render(){
 }
 
 function renderControls(){
-  $("#stsel").innerHTML = DATA.station_names.map(n=>
+  $("#stsel").innerHTML =
+    `<option value="${ALL}" ${curStation===ALL?"selected":""}>All Locations &mdash; Overview</option>` +
+    DATA.station_names.map(n=>
     `<option ${n===curStation?"selected":""}>${n}</option>`).join("");
   $("#mchips").innerHTML = DATA.months.map((m,i)=>
     `<button class="mchip ${i===curMonth?'active':''}" data-i="${i}" role="tab"
@@ -248,6 +334,14 @@ $("#mchips").addEventListener("click", e=>{
   const b = e.target.closest(".mchip"); if(!b) return;
   curMonth = +b.dataset.i; renderControls(); render();
 });
+function drill(e){
+  const r = e.target.closest(".ovrow[data-st]"); if(!r) return;
+  curStation = r.dataset.st;
+  sessionStorage.setItem("pulse-station", curStation);
+  renderControls(); render(); window.scrollTo({top:0});
+}
+$("#weeks").addEventListener("click", drill);
+$("#weeks").addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" ") drill(e); });
 
 // worked-hours tooltip (single floating element; survives scroll containers)
 const tip = $("#tip");
