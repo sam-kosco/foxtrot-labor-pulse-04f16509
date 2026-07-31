@@ -1,0 +1,2232 @@
+{
+  "BDL": {
+    "labor_keys": [
+      "BDL CABIN"
+    ],
+    "salary_keys": [
+      "BDL CABIN"
+    ],
+    "labor_key": "BDL CABIN",
+    "salary_key": "BDL CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "Breeze RON",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Breeze_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "BDL"
+              ],
+              [
+                "Breeze RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.04
+      },
+      {
+        "name": "Breeze Ultra",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Breeze_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "BDL"
+              ],
+              [
+                "Breeze Ultra",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 10.2
+      },
+      {
+        "name": "Facility Budget",
+        "sheet_row": 5,
+        "kind": "fixed",
+        "rate": 2.4
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "Breeze RON",
+        3.04
+      ],
+      [
+        "Breeze Ultra",
+        10.2
+      ],
+      [
+        "Facility Budget",
+        2.4
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "BNA FAC": {
+    "labor_keys": [
+      "BNA FAC"
+    ],
+    "salary_keys": [
+      "BNA FAC"
+    ],
+    "labor_key": "BNA FAC",
+    "salary_key": "BNA FAC",
+    "has_salary": true,
+    "fac_only": true,
+    "services": [
+      {
+        "name": "Facility Budget",
+        "sheet_row": 3,
+        "kind": "fixed",
+        "rate": 46.8
+      }
+    ],
+    "aircraft_service_rows": [
+      4
+    ],
+    "budget_table": [
+      [
+        "Facility Budget",
+        46.8
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "CAK": {
+    "labor_keys": [
+      "CAK CABIN"
+    ],
+    "salary_keys": [
+      "CAK CABIN"
+    ],
+    "labor_key": "CAK CABIN",
+    "salary_key": "CAK CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "PSA RON",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CAK"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 5.61
+      },
+      {
+        "name": "PSA ED 3",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CAK"
+              ],
+              [
+                "ED3",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 9.6
+      },
+      {
+        "name": "PSA ED 4",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CAK"
+              ],
+              [
+                "ED4",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 13.5
+      },
+      {
+        "name": "Facility Budget",
+        "sheet_row": 6,
+        "kind": "fixed",
+        "rate": 0
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "PSA RON",
+        5.61
+      ],
+      [
+        "PSA ED 3",
+        9.6
+      ],
+      [
+        "PSA ED 4",
+        13.5
+      ],
+      [
+        "Facility Budget",
+        0
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "CLT": {
+    "labor_keys": [
+      "CLT CABIN"
+    ],
+    "salary_keys": [
+      "CLT CABIN"
+    ],
+    "labor_key": "CLT CABIN",
+    "salary_key": "CLT CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "PSA RON",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CLT"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 5.97
+      },
+      {
+        "name": "PSA ED 3",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CLT"
+              ],
+              [
+                "ED3",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 9.6
+      },
+      {
+        "name": "PSA ED 4",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CLT"
+              ],
+              [
+                "ED4",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 13.5
+      },
+      {
+        "name": "Facility Budget",
+        "sheet_row": 6,
+        "kind": "fixed",
+        "rate": 0
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "PSA RON",
+        5.97
+      ],
+      [
+        "PSA ED 3",
+        9.6
+      ],
+      [
+        "PSA ED 4",
+        13.5
+      ],
+      [
+        "Facility Budget",
+        0
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "CMH": {
+    "labor_keys": [
+      "CMH CABIN"
+    ],
+    "salary_keys": [
+      "CMH CABIN"
+    ],
+    "labor_key": "CMH CABIN",
+    "salary_key": "CMH CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "Envoy IHC",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CMH"
+              ],
+              [
+                "IHC",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 4.9
+      },
+      {
+        "name": "Envoy ED",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CMH"
+              ],
+              [
+                "ED1",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CMH"
+              ],
+              [
+                "ED2",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.8
+      },
+      {
+        "name": "Ultras",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CMH"
+              ]
+            ]
+          }
+        ],
+        "rate": 19
+      },
+      {
+        "name": "Shroud Cleaning",
+        "sheet_row": 6,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "SUMIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": "Shroud Count",
+            "criteria": [
+              [
+                "Location",
+                "CMH"
+              ]
+            ]
+          }
+        ],
+        "rate": 7.5
+      },
+      {
+        "name": "AA Facilities",
+        "sheet_row": 7,
+        "kind": "fixed",
+        "rate": 5
+      }
+    ],
+    "aircraft_service_rows": [
+      3,
+      5
+    ],
+    "budget_table": [
+      [
+        "Envoy IHC",
+        4.9
+      ],
+      [
+        "Envoy ED",
+        3.8
+      ],
+      [
+        "Ultras",
+        19
+      ],
+      [
+        "Shroud Cleaning",
+        7.5
+      ],
+      [
+        "AA Facilities",
+        5
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "CVG": {
+    "labor_keys": [
+      "CVG CABIN"
+    ],
+    "salary_keys": [
+      "CVG CABIN"
+    ],
+    "labor_key": "CVG CABIN",
+    "salary_key": "CVG CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "Envoy IHC",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CVG"
+              ],
+              [
+                "IHC",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 4.65
+      },
+      {
+        "name": "Envoy ED",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CVG"
+              ],
+              [
+                "ED1",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CVG"
+              ],
+              [
+                "ED2",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.8
+      },
+      {
+        "name": "PSA RONs",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CVG"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 5
+      },
+      {
+        "name": "PSA ED 3",
+        "sheet_row": 6,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CVG"
+              ],
+              [
+                "ED3",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 9.6
+      },
+      {
+        "name": "PSA ED 4",
+        "sheet_row": 7,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CVG"
+              ],
+              [
+                "ED4",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 13.5
+      },
+      {
+        "name": "Frontier A320",
+        "sheet_row": 8,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Frontier_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CVG"
+              ],
+              [
+                "Aircraft Type and Service",
+                "A320 Heavy Clean"
+              ]
+            ]
+          }
+        ],
+        "rate": 22.5
+      },
+      {
+        "name": "Frontier A321",
+        "sheet_row": 9,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Frontier_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CVG"
+              ],
+              [
+                "Aircraft Type and Service",
+                "A321 Heavy Clean"
+              ]
+            ]
+          }
+        ],
+        "rate": 24.5
+      },
+      {
+        "name": "Frontier Janitorial",
+        "sheet_row": 10,
+        "kind": "fixed",
+        "rate": 2.29
+      }
+    ],
+    "aircraft_service_rows": [
+      3,
+      5,
+      8,
+      9
+    ],
+    "budget_table": [
+      [
+        "Envoy IHC",
+        4.65
+      ],
+      [
+        "Envoy ED",
+        3.8
+      ],
+      [
+        "PSA RONs",
+        5
+      ],
+      [
+        "PSA ED 3",
+        9.6
+      ],
+      [
+        "PSA ED 4",
+        13.5
+      ],
+      [
+        "Frontier A320",
+        22.5
+      ],
+      [
+        "Frontier A321",
+        24.5
+      ],
+      [
+        "Frontier Janitorial",
+        2.29
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "DAY": {
+    "labor_keys": [
+      "DAY CABIN"
+    ],
+    "salary_keys": [
+      "DAY CABIN"
+    ],
+    "labor_key": "DAY CABIN",
+    "salary_key": "DAY CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "PSA RON",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAY"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 5.58
+      },
+      {
+        "name": "PSA ED 3",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAY"
+              ],
+              [
+                "ED3",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 9.6
+      },
+      {
+        "name": "PSA ED 4",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAY"
+              ],
+              [
+                "ED4",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 13.5
+      },
+      {
+        "name": "Facility Budget",
+        "sheet_row": 6,
+        "kind": "fixed",
+        "rate": 6
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "PSA RON",
+        5.58
+      ],
+      [
+        "PSA ED 3",
+        9.6
+      ],
+      [
+        "PSA ED 4",
+        13.5
+      ],
+      [
+        "Facility Budget",
+        6
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "DCA": {
+    "labor_keys": [
+      "DCA CABIN"
+    ],
+    "salary_keys": [
+      "DCA CABIN"
+    ],
+    "labor_key": "DCA CABIN",
+    "salary_key": "DCA CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "PSA RON",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DCA"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 11.25
+      },
+      {
+        "name": "PSA ED 3",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DCA"
+              ],
+              [
+                "ED3",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 9.6
+      },
+      {
+        "name": "PSA ED 4",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DCA"
+              ],
+              [
+                "ED4",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 13.5
+      },
+      {
+        "name": "Facility Budget",
+        "sheet_row": 6,
+        "kind": "fixed",
+        "rate": 7
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "PSA RON",
+        11.25
+      ],
+      [
+        "PSA ED 3",
+        9.6
+      ],
+      [
+        "PSA ED 4",
+        13.5
+      ],
+      [
+        "Facility Budget",
+        7
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "DFW": {
+    "labor_keys": [
+      "DFW CABIN"
+    ],
+    "salary_keys": [
+      "DFW CABIN"
+    ],
+    "labor_key": "DFW CABIN",
+    "salary_key": "DFW CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "Envoy IHC",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ],
+              [
+                "IHC",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 4
+      },
+      {
+        "name": "Envoy ED",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ],
+              [
+                "ED1",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ],
+              [
+                "ED2",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.3
+      },
+      {
+        "name": "Ultras",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ]
+            ]
+          }
+        ],
+        "rate": 19
+      },
+      {
+        "name": "Shroud Cleaning",
+        "sheet_row": 6,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "SUMIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": "Shroud Count",
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ]
+            ]
+          }
+        ],
+        "rate": 7.5
+      },
+      {
+        "name": "Frontier A320",
+        "sheet_row": 7,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Frontier_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ],
+              [
+                "Aircraft Type and Service",
+                "A320 Heavy Clean"
+              ]
+            ]
+          }
+        ],
+        "rate": 22.5
+      },
+      {
+        "name": "Frontier A321",
+        "sheet_row": 8,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Frontier_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ],
+              [
+                "Aircraft Type and Service",
+                "A321 Heavy Clean"
+              ]
+            ]
+          }
+        ],
+        "rate": 24.5
+      },
+      {
+        "name": "Regional RONS",
+        "sheet_row": 9,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ],
+              [
+                "RRON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 4.1
+      }
+    ],
+    "aircraft_service_rows": [
+      3,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "budget_table": [
+      [
+        "Envoy IHC",
+        4
+      ],
+      [
+        "Envoy ED",
+        3.3
+      ],
+      [
+        "Ultras",
+        19
+      ],
+      [
+        "Shroud Cleaning",
+        7.5
+      ],
+      [
+        "Frontier A320",
+        22.5
+      ],
+      [
+        "Frontier A321",
+        24.5
+      ],
+      [
+        "Regional RON",
+        4.1
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "FLL FAC": {
+    "labor_keys": [
+      "FLL FAC"
+    ],
+    "salary_keys": [
+      "FLL FAC"
+    ],
+    "labor_key": "FLL FAC",
+    "salary_key": "FLL FAC",
+    "has_salary": true,
+    "fac_only": true,
+    "services": [
+      {
+        "name": "Facility Budget",
+        "sheet_row": 3,
+        "kind": "fixed",
+        "rate": 35.5
+      }
+    ],
+    "aircraft_service_rows": [
+      4
+    ],
+    "budget_table": [
+      [
+        "Facility Budget",
+        35.5
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "GSP": {
+    "labor_keys": [
+      "GSP CABIN"
+    ],
+    "salary_keys": [
+      "GSP CABIN"
+    ],
+    "labor_key": "GSP CABIN",
+    "salary_key": "GSP CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "PSA RON",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "GSP"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 5.85
+      },
+      {
+        "name": "PSA ED 3",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "GSP"
+              ],
+              [
+                "ED3",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 9.6
+      },
+      {
+        "name": "PSA ED 4",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "GSP"
+              ],
+              [
+                "ED4",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 13.5
+      },
+      {
+        "name": "Facility Budget",
+        "sheet_row": 6,
+        "kind": "fixed",
+        "rate": 0
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "PSA RON",
+        5.85
+      ],
+      [
+        "PSA ED 3",
+        9.6
+      ],
+      [
+        "PSA ED 4",
+        13.5
+      ],
+      [
+        "Facility Budget",
+        0
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "IAH": {
+    "labor_keys": [
+      "IAH CABIN",
+      "IAH FAC"
+    ],
+    "salary_keys": [
+      "IAH CABIN",
+      "IAH FAC"
+    ],
+    "labor_key": "IAH CABIN",
+    "salary_key": "IAH CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "Mesa IHC",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "IHC",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 5.1
+      },
+      {
+        "name": "Mesa RON",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 4.9
+      },
+      {
+        "name": "Mesa EC",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "EC",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 0.95
+      },
+      {
+        "name": "Mesa ED",
+        "sheet_row": 6,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "ED",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.4
+      },
+      {
+        "name": "Mesa Disinfect",
+        "sheet_row": 7,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "ESS",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 1
+      },
+      {
+        "name": "Mesa CE",
+        "sheet_row": 8,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "CE",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 1.4
+      },
+      {
+        "name": "Mesa DSC",
+        "sheet_row": 9,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "DSC",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.3
+      },
+      {
+        "name": "AA Facilities Budget",
+        "sheet_row": 10,
+        "kind": "fixed",
+        "rate": 25
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "Mesa IHC",
+        5.1
+      ],
+      [
+        "Mesa RON",
+        4.9
+      ],
+      [
+        "Mesa EC",
+        0.95
+      ],
+      [
+        "Mesa ED",
+        3.4
+      ],
+      [
+        "Mesa Disinfect",
+        1
+      ],
+      [
+        "Mesa CE",
+        1.4
+      ],
+      [
+        "Mesa DSC",
+        3.3
+      ],
+      [
+        "AA Facilities Budget",
+        25
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "LIT": {
+    "labor_keys": [
+      "LIT CABIN"
+    ],
+    "salary_keys": [
+      "LIT CABIN"
+    ],
+    "labor_key": "LIT CABIN",
+    "salary_key": "LIT CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "Envoy IHC",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "LIT"
+              ],
+              [
+                "IHC",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 4.9
+      },
+      {
+        "name": "Envoy ED",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "LIT"
+              ],
+              [
+                "ED1",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "LIT"
+              ],
+              [
+                "ED2",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.8
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "Envoy IHC",
+        4.9
+      ],
+      [
+        "Envoy ED",
+        3.8
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "MLB FAC": {
+    "labor_keys": [
+      "MLB FAC"
+    ],
+    "salary_keys": [
+      "MLB FAC"
+    ],
+    "labor_key": "MLB FAC",
+    "salary_key": "MLB FAC",
+    "has_salary": true,
+    "fac_only": true,
+    "services": [
+      {
+        "name": "Facility Budget",
+        "sheet_row": 3,
+        "kind": "fixed",
+        "rate": 89.2
+      }
+    ],
+    "aircraft_service_rows": [
+      4
+    ],
+    "budget_table": [
+      [
+        "Facility Budget",
+        89.2
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "ORF": {
+    "labor_keys": [
+      "ORF CABIN"
+    ],
+    "salary_keys": [
+      "ORF CABIN"
+    ],
+    "labor_key": "ORF CABIN",
+    "salary_key": "ORF CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "PSA RON",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "ORF"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 5.65
+      },
+      {
+        "name": "PSA ED 3",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "ORF"
+              ],
+              [
+                "ED3",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 9.6
+      },
+      {
+        "name": "PSA ED 4",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "ORF"
+              ],
+              [
+                "ED4",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 13.5
+      },
+      {
+        "name": "Facility Budget",
+        "sheet_row": 6,
+        "kind": "fixed",
+        "rate": 0
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "PSA RON",
+        5.65
+      ],
+      [
+        "PSA ED 3",
+        9.6
+      ],
+      [
+        "PSA ED 4",
+        13.5
+      ],
+      [
+        "Facility Budget",
+        0
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "SGF": {
+    "labor_keys": [
+      "SGF CABIN"
+    ],
+    "salary_keys": [
+      "SGF CABIN"
+    ],
+    "labor_key": "SGF CABIN",
+    "salary_key": "SGF CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "Envoy IHC",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SGF"
+              ],
+              [
+                "IHC",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 4.9
+      },
+      {
+        "name": "Envoy ED",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SGF"
+              ],
+              [
+                "ED1",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SGF"
+              ],
+              [
+                "ED2",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.8
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "Envoy IHC",
+        4.9
+      ],
+      [
+        "Envoy ED",
+        3.8
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "STL AA FAC": {
+    "labor_keys": [
+      "STL FAC"
+    ],
+    "salary_keys": [
+      "STL FAC"
+    ],
+    "labor_key": "STL FAC",
+    "salary_key": "STL FAC",
+    "has_salary": true,
+    "fac_only": true,
+    "services": [
+      {
+        "name": "Facility Budget",
+        "sheet_row": 3,
+        "kind": "fixed",
+        "rate": 42
+      }
+    ],
+    "aircraft_service_rows": [
+      4
+    ],
+    "budget_table": [
+      [
+        "Facility Budget",
+        42
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "STL GoJet": {
+    "labor_keys": [
+      "STL GOJET"
+    ],
+    "salary_keys": [
+      "STL GOJET"
+    ],
+    "labor_key": "STL GOJET",
+    "salary_key": "STL GOJET",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "GoJet RON",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "GoJet_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "STL"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 4.14
+      },
+      {
+        "name": "GoJet IHC",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "GoJet_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "STL"
+              ],
+              [
+                "IHC",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 6.55
+      },
+      {
+        "name": "GoJet CE",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "GoJet_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "STL"
+              ],
+              [
+                "CE",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.81
+      },
+      {
+        "name": "GoJet ED 1-2",
+        "sheet_row": 6,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "GoJet_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "STL"
+              ],
+              [
+                "ED 1&2",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.88
+      },
+      {
+        "name": "GoJet ED 3-4",
+        "sheet_row": 7,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "GoJet_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "STL"
+              ],
+              [
+                "ED 3&4",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 0
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "GoJet RON",
+        4.14
+      ],
+      [
+        "GoJet IHC",
+        6.55
+      ],
+      [
+        "GoJet CE",
+        3.81
+      ],
+      [
+        "GoJet ED 1-2",
+        3.88
+      ],
+      [
+        "GoJet ED 3-4",
+        0
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "TUS FAC": {
+    "labor_keys": [
+      "TUS FAC"
+    ],
+    "salary_keys": [
+      "TUS FAC"
+    ],
+    "labor_key": "TUS FAC",
+    "salary_key": "TUS FAC",
+    "has_salary": true,
+    "fac_only": true,
+    "services": [
+      {
+        "name": "Facility Budget",
+        "sheet_row": 3,
+        "kind": "fixed",
+        "rate": 80.3
+      }
+    ],
+    "aircraft_service_rows": [
+      4
+    ],
+    "budget_table": [
+      [
+        "Facility Budget",
+        80.3
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "TYS": {
+    "labor_keys": [
+      "TYS PSA"
+    ],
+    "salary_keys": [
+      "TYS PSA"
+    ],
+    "labor_key": "TYS PSA",
+    "salary_key": "TYS PSA",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "PSA RON",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "TYS"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 5.85
+      },
+      {
+        "name": "PSA ED 3",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "TYS"
+              ],
+              [
+                "ED3",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 9.6
+      },
+      {
+        "name": "PSA ED 4",
+        "sheet_row": 5,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "PSA_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "TYS"
+              ],
+              [
+                "ED4",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 13.5
+      },
+      {
+        "name": "Facility Budget",
+        "sheet_row": 6,
+        "kind": "fixed",
+        "rate": 11.8
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "PSA RON",
+        5.85
+      ],
+      [
+        "PSA ED 3",
+        9.6
+      ],
+      [
+        "PSA ED 4",
+        13.5
+      ],
+      [
+        "Facility Budget",
+        11.8
+      ]
+    ],
+    "has_aircraft_kpi": true
+  },
+  "XNA": {
+    "labor_keys": [
+      "XNA CABIN"
+    ],
+    "salary_keys": [
+      "XNA CABIN"
+    ],
+    "labor_key": "XNA CABIN",
+    "salary_key": "XNA CABIN",
+    "has_salary": true,
+    "fac_only": false,
+    "services": [
+      {
+        "name": "Envoy IHC",
+        "sheet_row": 3,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "XNA"
+              ],
+              [
+                "IHC",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 4.9
+      },
+      {
+        "name": "Envoy ED",
+        "sheet_row": 4,
+        "kind": "count",
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "XNA"
+              ],
+              [
+                "ED1",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "Envoy_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "XNA"
+              ],
+              [
+                "ED2",
+                1
+              ]
+            ]
+          }
+        ],
+        "rate": 3.8
+      }
+    ],
+    "aircraft_service_rows": [
+      3
+    ],
+    "budget_table": [
+      [
+        "Envoy IHC",
+        4.9
+      ],
+      [
+        "Envoy ED",
+        3.8
+      ]
+    ],
+    "has_aircraft_kpi": true
+  }
+}

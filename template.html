@@ -1,0 +1,277 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Foxtrot Labor Pulse</title>
+<style>
+:root{
+  --navy:#0f2238; --navy2:#16314f; --orange:#f07f1b; --ink:#0c1a2b;
+  --paper:#f4f6f9; --surface:#ffffff; --muted:#7e8aa0; --line:#e2e7ef;
+  --good:#1f9d57; --bad:#d2453b; --rowtint:#fbfcfe; --headtxt:#c7d2e2;
+  --future:#a9b4c6; --tipbg:#0f2238; --tiptx:#ffffff;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#e6ebf3; --paper:#0b1626; --surface:#132238; --muted:#8fa0b8;
+    --line:#24374f; --rowtint:#16273d; --future:#5c6c82;
+    --tipbg:#e6ebf3; --tiptx:#0f2238;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e6ebf3; --paper:#0b1626; --surface:#132238; --muted:#8fa0b8;
+  --line:#24374f; --rowtint:#16273d; --future:#5c6c82;
+  --tipbg:#e6ebf3; --tiptx:#0f2238;
+}
+:root[data-theme="light"]{
+  --ink:#0c1a2b; --paper:#f4f6f9; --surface:#ffffff; --muted:#7e8aa0;
+  --line:#e2e7ef; --rowtint:#fbfcfe; --future:#a9b4c6;
+  --tipbg:#0f2238; --tiptx:#ffffff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:'Barlow','Segoe UI',system-ui,sans-serif;font-size:14px}
+.topbar{display:flex;align-items:center;gap:18px;background:var(--navy);color:#fff;
+  padding:0 22px;height:60px;position:sticky;top:0;z-index:30}
+.brand{font-size:19px;font-weight:800;letter-spacing:.01em}
+.brand span{color:var(--orange)}
+.topmeta{margin-left:auto;font-size:12px;color:#9fb0c8;text-align:right;line-height:1.35}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 22px 60px}
+h2{color:var(--ink);font-size:22px;font-weight:800;margin:0}
+h2 .sub{color:var(--muted);font-weight:600;font-size:14px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0 18px}
+.controls label{font-size:13px;font-weight:600;color:var(--muted)}
+select{font:inherit;font-weight:600;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:180px}
+select:focus{outline:none;border-color:var(--orange)}
+.mchips{display:flex;gap:6px;flex-wrap:wrap}
+.mchip{font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px}
+.mchip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.mchip:focus-visible,select:focus-visible,.wh:focus-visible{outline:2px solid var(--orange);outline-offset:1px}
+.kpis{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:14px 18px;min-width:168px;flex:0 1 auto}
+.kpi-label{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.kpi-val{font-size:25px;font-weight:800;color:var(--ink);margin-top:3px;font-variant-numeric:tabular-nums}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi-val.pos{color:var(--good)} .kpi-val.neg{color:var(--bad)}
+.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:3px 11px;color:#fff}
+.badge.over{background:var(--bad)} .badge.under{background:var(--good)} .badge.na{background:var(--muted)}
+.weekcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;margin-bottom:16px}
+.scroller{overflow-x:auto}
+.grid{display:grid;min-width:640px}
+.grow{display:contents}
+.cell{padding:8px 9px;font-size:13px;border-bottom:1px solid var(--line);
+  white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right;background:var(--surface)}
+.cell.name{text-align:left;font-weight:600;position:sticky;left:0;z-index:2;
+  overflow:hidden;text-overflow:ellipsis;max-width:210px}
+.hrow .cell{background:var(--navy);color:#fff;font-weight:700;font-size:12px;border-bottom:0}
+.hrow .cell .dow{display:block;font-weight:600;font-size:10px;color:var(--headtxt);letter-spacing:.05em}
+.hrow .cell.name{background:var(--navy);font-size:13px}
+.zero{color:var(--muted)}
+.future{color:var(--future)}
+.totrow .cell{background:var(--rowtint);font-weight:700;border-top:2px solid var(--line)}
+.totrow .cell.name{color:var(--ink)}
+.wh{cursor:help;text-decoration:underline dotted var(--orange) 1.5px;text-underline-offset:3px}
+.wkstats{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;
+  padding:9px 12px;background:var(--rowtint);border-top:1px solid var(--line);font-size:12.5px}
+.wkstats b{font-variant-numeric:tabular-nums}
+.wkstats .lbl{color:var(--muted);font-weight:600}
+.cols{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.main{flex:1 1 640px;min-width:0}
+.side{flex:0 1 300px;min-width:260px}
+.ratecard{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.ratecard .hd{background:var(--navy2);color:#fff;font-weight:700;font-size:12.5px;padding:9px 14px}
+.raterow{display:flex;justify-content:space-between;gap:10px;padding:7px 14px;
+  font-size:13px;border-bottom:1px solid var(--line)}
+.raterow:last-child{border-bottom:0}
+.raterow b{font-variant-numeric:tabular-nums}
+.raterow .unit{color:var(--muted);font-weight:400;font-size:11.5px}
+.note{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--orange);
+  border-radius:9px;padding:10px 14px;font-size:12.5px;line-height:1.65;color:var(--ink)}
+.note b{color:var(--orange);filter:brightness(.85)}
+.note p{margin:4px 0}
+#tip{position:fixed;z-index:99;background:var(--tipbg);color:var(--tiptx);border-radius:9px;
+  padding:9px 12px;font-size:12.5px;line-height:1.55;max-width:270px;pointer-events:none;
+  box-shadow:0 8px 24px #0006;display:none}
+#tip .t-hd{font-weight:700;margin-bottom:2px}
+#tip .t-tot{font-weight:700;border-top:1px solid #ffffff33;margin-top:4px;padding-top:4px}
+:root[data-theme="dark"] #tip .t-tot{border-top-color:#0f223833}
+@media(max-width:640px){
+  .wrap{padding:14px 10px 50px}
+  .topbar{padding:0 14px}
+  .kpi{min-width:130px;padding:11px 14px;flex:1 1 40%}
+  .kpi-val{font-size:21px}
+}
+</style>
+
+<header class="topbar">
+  <div class="brand">Foxtrot <span>Pulse</span></div>
+  <div class="topmeta">Commercial labor pulse<br>Data as of <b id="gen"></b></div>
+</header>
+
+<div class="wrap">
+  <h2 id="title"></h2>
+  <div class="controls">
+    <label for="stsel">Station</label>
+    <select id="stsel" aria-label="Choose station"></select>
+    <div class="mchips" id="mchips" role="tablist" aria-label="Month"></div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="cols">
+    <div class="main" id="weeks"></div>
+    <div class="side">
+      <div class="ratecard" id="rates"></div>
+      <div class="note">
+        <p><b>How to read this.</b> Each aircraft serviced (from the airline debrief forms)
+        earns the station a set number of budgeted labor hours &mdash; the rates in the
+        Service Budgets card. Facility budgets are a flat daily allowance.</p>
+        <p><b>Worked Hours</b> = hours punched in Paylocity by hourly employees assigned to
+        this station, plus 5.71&nbsp;h/day (40&nbsp;h &divide; 7) for each salaried employee.
+        Hover or tap any Worked Hours number for its breakdown. Overnight shifts count toward
+        the day the shift started.</p>
+        <p>Under budget is good; over budget means the station used more labor than the
+        aircraft mix earned. Days that haven&rsquo;t finished yet are grayed out.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const DATA = /*__DATA__*/;
+
+const $ = s => document.querySelector(s);
+const fmt = (v, dp=1) => v==null ? "—" :
+  Number(v).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:dp});
+const DOW = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+
+let curMonth = DATA.months.length-1, curStation = DATA.station_names[0];
+const saved = sessionStorage.getItem("pulse-station");
+if (saved && DATA.station_names.includes(saved)) curStation = saved;
+
+function variBadge(pct, over){
+  if (pct==null) return '<span class="badge na">no data</span>';
+  return `<span class="badge ${over?'over':'under'}">${pct}% ${over?'Over':'Under'} Budget</span>`;
+}
+
+function render(){
+  const M = DATA.months[curMonth], S = M.stations[curStation];
+  const elapsed = S.elapsed_through;
+  $("#title").innerHTML = `${curStation} Labor Pulse <span class="sub">&middot; ${M.label}</span>`;
+
+  // KPIs — month to date
+  const mtd = S.mtd;
+  $("#kpis").innerHTML = `
+    <div class="kpi"><div class="kpi-label">Budgeted hours &middot; MTD</div>
+      <div class="kpi-val">${fmt(mtd.budgeted)}</div>
+      <div class="kpi-sub">through day ${elapsed} of ${M.ndays}</div></div>
+    <div class="kpi"><div class="kpi-label">Worked hours &middot; MTD</div>
+      <div class="kpi-val">${fmt(mtd.worked)}</div>
+      <div class="kpi-sub">punched + salaried</div></div>
+    <div class="kpi"><div class="kpi-label">Month variance</div>
+      <div class="kpi-val ${mtd.over===null?'':(mtd.over?'neg':'pos')}" style="font-size:18px;padding-top:6px">
+        ${variBadge(mtd.variance, mtd.over)}</div>
+      <div class="kpi-sub">worked vs budgeted</div></div>`;
+
+  // week tables
+  let html = "";
+  S.weeks.forEach((wk,wi)=>{
+    const days = wk.days;
+    const cols = `minmax(170px,1.5fr) repeat(${days.length},minmax(54px,1fr))`;
+    const hdr = days.map(d=>{
+      const dow = DOW[new Date(M.year, M.month-1, d).getDay()];
+      return `<div class="cell"><span class="dow">${dow}</span>${d}</div>`;
+    }).join("");
+    const svcRows = S.services.map((sv,si)=>{
+      const cells = days.map(d=>{
+        const v = sv.days[d-1], fut = d>elapsed;
+        const cls = fut ? "future" : (v ? "" : "zero");
+        return `<div class="cell ${cls}">${fmt(v, sv.kind==="fixed"?1:1)}</div>`;
+      }).join("");
+      return `<div class="grow"><div class="cell name" title="${sv.kind==="fixed"
+        ? "Flat daily budget"
+        : "Aircraft receiving this service, from debrief forms"}">${sv.name}</div>${cells}</div>`;
+    }).join("");
+    const budCells = days.map(d=>{
+      const fut = d>elapsed;
+      return `<div class="cell ${fut?'future':''}">${fmt(S.budgeted[d-1])}</div>`;
+    }).join("");
+    const wrkCells = days.map(d=>{
+      const fut = d>elapsed;
+      return `<div class="cell ${fut?'future':''}"><span class="wh" tabindex="0"
+        data-d="${d}">${fmt(S.worked[d-1])}</span></div>`;
+    }).join("");
+    const stats = [];
+    if (wk.avg_aircraft!=null) stats.push(`<span><span class="lbl">Avg aircraft/day</span> <b>${fmt(wk.avg_aircraft)}</b></span>`);
+    stats.push(`<span><span class="lbl">Avg budgeted</span> <b>${fmt(wk.avg_budgeted)} h</b></span>`);
+    stats.push(`<span><span class="lbl">Avg worked</span> <b>${fmt(wk.avg_worked)} h</b></span>`);
+    stats.push(wk.variance ? variBadge(wk.variance.pct, wk.variance.dir==="Over Budget")
+                           : '<span class="badge na">no days elapsed</span>');
+    html += `
+    <div class="weekcard">
+      <div class="scroller"><div class="grid" style="grid-template-columns:${cols}">
+        <div class="grow hrow"><div class="cell name">Week ${wi+1}</div>${hdr}</div>
+        ${svcRows}
+        <div class="grow totrow"><div class="cell name">Budgeted Hours</div>${budCells}</div>
+        <div class="grow totrow"><div class="cell name">Worked Hours</div>${wrkCells}</div>
+      </div></div>
+      <div class="wkstats">${stats.join("")}</div>
+    </div>`;
+  });
+  $("#weeks").innerHTML = html;
+
+  // service budgets card
+  const rates = S.services.map(sv=>`
+    <div class="raterow"><span>${sv.name}</span>
+      <b>${fmt(sv.rate,2)} <span class="unit">${sv.kind==="fixed"?"h / day":"h / aircraft"}</span></b></div>`).join("");
+  $("#rates").innerHTML = `<div class="hd">${curStation} Service Budgets</div>${rates}`;
+}
+
+function renderControls(){
+  $("#stsel").innerHTML = DATA.station_names.map(n=>
+    `<option ${n===curStation?"selected":""}>${n}</option>`).join("");
+  $("#mchips").innerHTML = DATA.months.map((m,i)=>
+    `<button class="mchip ${i===curMonth?'active':''}" data-i="${i}" role="tab"
+      aria-selected="${i===curMonth}">${m.label}</button>`).join("");
+}
+
+$("#gen").textContent = DATA.generated;
+renderControls(); render();
+
+$("#stsel").addEventListener("change", e=>{
+  curStation = e.target.value;
+  sessionStorage.setItem("pulse-station", curStation);
+  render();
+});
+$("#mchips").addEventListener("click", e=>{
+  const b = e.target.closest(".mchip"); if(!b) return;
+  curMonth = +b.dataset.i; renderControls(); render();
+});
+
+// worked-hours tooltip (single floating element; survives scroll containers)
+const tip = $("#tip");
+function showTip(el){
+  const M = DATA.months[curMonth], S = M.stations[curStation];
+  const d = +el.dataset.d, h = S.hourly[d-1], n = S.salary_heads[d-1];
+  const sal = n*40/7;
+  tip.innerHTML = `<div class="t-hd">Worked hours &middot; ${M.label.split(" ")[0]} ${d}</div>
+    Hourly punches: <b>${fmt(h)} h</b><br>
+    Salaried: ${n} ${n===1?"person":"people"} &times; 5.71 h = <b>${fmt(sal)} h</b>
+    <div class="t-tot">Total ${fmt(h+sal)} h</div>`;
+  const r = el.getBoundingClientRect();
+  tip.style.display = "block";
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = Math.min(Math.max(8, r.left + r.width/2 - tw/2), innerWidth - tw - 8);
+  let y = r.top - th - 8; if (y < 66) y = r.bottom + 8;
+  tip.style.left = x+"px"; tip.style.top = y+"px";
+}
+function hideTip(){ tip.style.display="none"; }
+document.addEventListener("mouseover", e=>{ const w=e.target.closest(".wh"); if(w) showTip(w); });
+document.addEventListener("mouseout",  e=>{ if(e.target.closest(".wh")) hideTip(); });
+document.addEventListener("focusin",   e=>{ const w=e.target.closest(".wh"); if(w) showTip(w); });
+document.addEventListener("focusout",  e=>{ if(e.target.closest(".wh")) hideTip(); });
+document.addEventListener("click", e=>{ const w=e.target.closest(".wh");
+  if(w){ showTip(w); e.stopPropagation(); } else hideTip(); });
+window.addEventListener("scroll", hideTip, true);
+</script>
