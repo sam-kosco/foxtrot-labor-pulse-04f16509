@@ -6,7 +6,6 @@ on:
     # America/New_York proceed — 9 AM Eastern year-round across DST.
     - cron: "0 13 * * *"
     - cron: "0 14 * * *"
-    - cron: "45 14 * * *"   # TEMP: one-time schedule-path test, remove after
   workflow_dispatch:
     # Always available for manual refresh from the Actions tab
 
