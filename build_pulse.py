@@ -20,12 +20,13 @@ import pandas as pd
 HERE = Path(__file__).parent
 if os.environ.get("PULSE_DATA_DIR"):
     # CI mode: fetch_sources.py has downloaded everything into one flat dir
-    DEBRIEFS = PAYLOCITY = LOCMGMT_DIR = Path(os.environ["PULSE_DATA_DIR"])
+    DEBRIEFS = PAYLOCITY = LOCMGMT_DIR = BUDGETS_DIR = Path(os.environ["PULSE_DATA_DIR"])
 else:
     DH = Path(r"C:\Users\samko\Foxtrot Aviation Services\Data Hub - Documents")
     DEBRIEFS = DH / "Power Flows" / "Debriefs"
     PAYLOCITY = DH / "Paylocity Reports"
     LOCMGMT_DIR = DH / "Power BI Data Sources"
+    BUDGETS_DIR = DH / "Pulse Sheets"
 WINDOW_START = date(2026, 5, 1)  # same cutoff the workbook queries hardcode
 EXCLUDED_TITLES = {"Director", "Regional Director", "Regional Manager II"}
 TODAY = date.today()
@@ -176,6 +177,79 @@ def load_frontier():
 
 # ---------------------------------------------------------------- paylocity
 
+NORM = lambda s: re.sub(r"[^a-z0-9]", "", str(s).lower())
+
+
+def load_budget_workbook():
+    """Service Budgets.xlsx: one sheet per location, Service | Budget rows.
+    This workbook is the authority on which locations exist, which services
+    each has, and the hours-per-job rates."""
+    wb = openpyxl.load_workbook(BUDGETS_DIR / "Service Budgets.xlsx", data_only=True)
+    out = {}
+    for ws in wb.worksheets:
+        rows = []
+        for r in range(2, ws.max_row + 1):
+            svc, rate = ws.cell(row=r, column=1).value, ws.cell(row=r, column=2).value
+            if svc is None or str(svc).strip() == "":
+                continue
+            rows.append((str(svc).strip(), float(rate) if rate is not None else 0.0))
+        if rows:
+            out[ws.title.strip()] = rows
+    wb.close()
+    return out
+
+
+def merge_budget_config(stations, budgets, catalog):
+    """Build the effective per-station config: the budget workbook decides the
+    station list, service list, and rates; specs come from stations.json when
+    the station+service already exist there, else from the service catalog
+    templates ({LOC} = first 3 letters of the sheet name). Unknown service
+    names fall back to a flat daily budget, with a warning."""
+    merged = {}
+    for st_name, rows in budgets.items():
+        code = st_name.strip()[:3].upper()
+        base = stations.get(st_name)
+        base_by_name = ({NORM(s["name"]): (i, s) for i, s in enumerate(base["services"])}
+                        if base else {})
+        base_aircraft = ({r - 3 for r in base["aircraft_service_rows"]} if base else set())
+        services = []
+        for svc_name, rate in rows:
+            key = NORM(svc_name)
+            if key in base_by_name:
+                i, src = base_by_name[key]
+                svc = {k: v for k, v in src.items() if k != "sheet_row"}
+                svc["aircraft"] = (not base["fac_only"]) and i in base_aircraft
+            elif key in catalog:
+                tpl = catalog[key]
+                svc = {"kind": tpl["kind"], "aircraft": tpl["aircraft"]}
+                if tpl["kind"] == "count":
+                    svc["specs"] = [
+                        {"fn": sp["fn"], "table": sp["table"], "sum_col": sp["sum_col"],
+                         "criteria": [[c, (code if v == "{LOC}" else v)]
+                                      for c, v in sp["criteria"]]}
+                        for sp in tpl["specs"]]
+            else:
+                print(f"  !! {st_name}: unknown service {svc_name!r} — "
+                      f"treating as flat daily budget")
+                svc = {"kind": "fixed", "aircraft": False}
+            svc["name"], svc["rate"] = svc_name, rate
+            services.append(svc)
+        fac_only = all(s["kind"] == "fixed" for s in services)
+        if base:
+            labor_keys, salary_keys = base["labor_keys"], base["salary_keys"]
+        else:
+            k = f"{code} FAC" if "FAC" in st_name.upper() else f"{code} CABIN"
+            labor_keys = salary_keys = [k]
+            print(f"  new location {st_name!r}: labor dist {k!r} (convention)")
+        merged[st_name] = {"labor_keys": labor_keys, "salary_keys": salary_keys,
+                           "fac_only": fac_only, "services": services}
+    for st in stations:
+        if st not in budgets:
+            print(f"  !! {st} is in stations.json but has no Service Budgets "
+                  f"sheet — dropped from the pulse")
+    return merged
+
+
 def load_managers(station_names):
     """Airport code (first 3 letters, both sides) → managers, per Location
     Management.csv. A station lands in every matching manager's group."""
@@ -293,9 +367,8 @@ def build_month(year, month, stations, tables, hours, emp):
             for i, v in enumerate(vals):
                 budgeted[i] += (v if svc["kind"] == "fixed" else v * rate)
             svc_rows.append({"name": svc["name"], "kind": svc["kind"],
-                             "rate": rate, "days": vals})
-        if cfg["fac_only"] and svc_rows:
-            budgeted = [float(v) for v in svc_rows[0]["days"]]
+                             "rate": rate, "days": vals,
+                             "aircraft": svc.get("aircraft", False)})
 
         # worked hours: hourly punches + salaried imputation, per day
         keys = [k.upper() for k in (cfg.get("labor_keys") or [cfg["labor_key"]]) if k]
@@ -327,18 +400,15 @@ def build_month(year, month, stations, tables, hours, emp):
                 return round(sum(pts) / len(pts), 2) if pts else None
             ac = None
             if not cfg["fac_only"]:
-                ac_rows = cfg["aircraft_service_rows"]
-                # rows are sheet rows; week-1 block starts at sheet row 2 header,
-                # services from row 3 => index = sheet_row - 3
                 acc = 0.0
                 got = False
-                for sr in ac_rows:
-                    idx = sr - 3
-                    if 0 <= idx < len(svc_rows):
-                        a = avg(svc_rows[idx]["days"])
-                        if a is not None:
-                            acc += a
-                            got = True
+                for sr in svc_rows:
+                    if not sr["aircraft"]:
+                        continue
+                    a = avg(sr["days"])
+                    if a is not None:
+                        acc += a
+                        got = True
                 ac = round(acc, 2) if got else None
             ab, aw = avg(budgeted), avg(worked)
             if ab and aw is not None and ab != 0:
@@ -371,7 +441,11 @@ def build_month(year, month, stations, tables, hours, emp):
 
 
 def main():
-    stations = json.loads((HERE / "stations.json").read_text())
+    base_stations = json.loads((HERE / "stations.json").read_text())
+    catalog = json.loads((HERE / "service_catalog.json").read_text())
+    budgets = load_budget_workbook()
+    print(f"Service Budgets.xlsx: {len(budgets)} location sheets")
+    stations = merge_budget_config(base_stations, budgets, catalog)
     print("loading sources...")
     tables = {
         "Envoy_Debriefs": load_envoy(),

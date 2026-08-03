@@ -1,0 +1,551 @@
+{
+  "breezeron": {
+    "name": "Breeze RON",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Breeze_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Breeze RON",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "breezeultra": {
+    "name": "Breeze Ultra",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Breeze_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Breeze Ultra",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "facilitybudget": {
+    "name": "Facility Budget",
+    "kind": "fixed",
+    "aircraft": false
+  },
+  "psaron": {
+    "name": "PSA RON",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "PSA_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "RON",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "psaed3": {
+    "name": "PSA ED 3",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "PSA_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "ED3",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "psaed4": {
+    "name": "PSA ED 4",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "PSA_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "ED4",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "envoyihc": {
+    "name": "Envoy IHC",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Envoy_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "IHC",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "envoyed": {
+    "name": "Envoy ED",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Envoy_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "ED1",
+            1
+          ]
+        ]
+      },
+      {
+        "fn": "COUNTIFS",
+        "table": "Envoy_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "ED2",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "ultras": {
+    "name": "Ultras",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Ultra_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ]
+        ]
+      }
+    ]
+  },
+  "shroudcleaning": {
+    "name": "Shroud Cleaning",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "SUMIFS",
+        "table": "Ultra_Debriefs",
+        "sum_col": "Shroud Count",
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ]
+        ]
+      }
+    ]
+  },
+  "aafacilities": {
+    "name": "AA Facilities",
+    "kind": "fixed",
+    "aircraft": false
+  },
+  "psarons": {
+    "name": "PSA RONs",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "PSA_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "RON",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "frontiera320": {
+    "name": "Frontier A320",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Frontier_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Aircraft Type and Service",
+            "A320 Heavy Clean"
+          ]
+        ]
+      }
+    ]
+  },
+  "frontiera321": {
+    "name": "Frontier A321",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Frontier_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Aircraft Type and Service",
+            "A321 Heavy Clean"
+          ]
+        ]
+      }
+    ]
+  },
+  "frontierjanitorial": {
+    "name": "Frontier Janitorial",
+    "kind": "fixed",
+    "aircraft": false
+  },
+  "regionalrons": {
+    "name": "Regional RONS",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Envoy_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "RRON",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesaihc": {
+    "name": "Mesa IHC",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "IHC",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesaron": {
+    "name": "Mesa RON",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "RON",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesaec": {
+    "name": "Mesa EC",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "EC",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesaed": {
+    "name": "Mesa ED",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "ED",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesadisinfect": {
+    "name": "Mesa Disinfect",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "ESS",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesace": {
+    "name": "Mesa CE",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "CE",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesadsc": {
+    "name": "Mesa DSC",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "DSC",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "aafacilitiesbudget": {
+    "name": "AA Facilities Budget",
+    "kind": "fixed",
+    "aircraft": false
+  },
+  "gojetron": {
+    "name": "GoJet RON",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "GoJet_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "RON",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "gojetihc": {
+    "name": "GoJet IHC",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "GoJet_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "IHC",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "gojetce": {
+    "name": "GoJet CE",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "GoJet_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "CE",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "gojeted12": {
+    "name": "GoJet ED 1-2",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "GoJet_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "ED 1&2",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "gojeted34": {
+    "name": "GoJet ED 3-4",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "GoJet_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "ED 3&4",
+            1
+          ]
+        ]
+      }
+    ]
+  }
+}
