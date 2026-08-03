@@ -6,6 +6,7 @@ on:
     # America/New_York proceed — 9 AM Eastern year-round across DST.
     - cron: "0 13 * * *"
     - cron: "0 14 * * *"
+    - cron: "45 14 * * *"   # TEMP: one-time schedule-path test, remove after
   workflow_dispatch:
     # Always available for manual refresh from the Actions tab
 
@@ -16,20 +17,33 @@ jobs:
       contents: write   # commits the rebuilt page back to the repo
 
     steps:
-      - name: 9 AM Eastern guard
+      - name: Check out repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # guard needs history to find today's refresh commit
+
+      - name: Daily refresh guard (9 AM Eastern, cron-delay tolerant)
         id: guard
         run: |
-          H=$(TZ=America/New_York date +%H)
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$H" != "09" ]; then
+          # GitHub crons often fire 30-60+ min late, so never require an exact
+          # hour: a scheduled run proceeds if it's 9 AM or later Eastern and
+          # no refresh commit has landed yet today. Manual runs always proceed.
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          export TZ=America/New_York
+          H=$(date +%H); TODAY=$(date +%F)
+          LAST=$(git log -1 --grep "chore: refresh pulse" \
+                 --format=%cd --date=format-local:%F 2>/dev/null || true)
+          if [ "$H" -lt 9 ]; then
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "Not 9 AM Eastern (hour=$H) — skipping."
+            echo "Before 9 AM Eastern (hour=$H) — skipping."
+          elif [ "$LAST" = "$TODAY" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Already refreshed today ($TODAY) — skipping."
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Check out repo
-        if: steps.guard.outputs.run == 'true'
-        uses: actions/checkout@v6
 
       - name: Set up Python
         if: steps.guard.outputs.run == 'true'
