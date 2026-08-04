@@ -27,6 +27,8 @@ FILES = [
     "Power Flows/Debriefs/Breeze Debriefs.xlsx",
     "Power Flows/Debriefs/Ultra Debriefs.xlsx",
     "Power Flows/Debriefs/Frontier Debriefs.xlsx",
+    "Power Flows/Debriefs/AA Debriefs.csv",
+    "Power Flows/Debriefs/APU Wash.xlsx",
     "Power BI Data Sources/Location Management.csv",
     "Pulse Sheets/Service Budgets.xlsx",
 ]

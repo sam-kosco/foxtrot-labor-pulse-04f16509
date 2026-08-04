@@ -1,0 +1,19 @@
+{
+  "STL AA CAB": {
+    "labor_keys": ["STL AA CAB"],
+    "salary_keys": ["STL AA CAB"],
+    "services": {
+      "shroudcleaning": {
+        "kind": "count", "aircraft": false,
+        "specs": [
+          {"fn": "COUNTIFS", "table": "AA_Debriefs", "sum_col": null,
+           "criteria": [["Station", "STL"], ["Service", "Shroud Cleaning"]]}
+        ]
+      }
+    }
+  },
+  "PVD AA CAB": {
+    "labor_keys": ["PVD AA CAB"],
+    "salary_keys": ["PVD AA CAB"]
+  }
+}

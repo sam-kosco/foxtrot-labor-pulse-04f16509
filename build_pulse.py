@@ -165,6 +165,33 @@ def load_ultra():
     return out
 
 
+AA_JOB_TYPES = {"DTC": "AA Turn", "RSTC": "AA Turn", "RON": "AA RON",
+                "RRON": "AA RON", "Security": "AA Security",
+                "Ultra": "Ultra", "Shroud": "Shroud Cleaning"}
+
+
+def load_aa():
+    t = pd.read_csv(DEBRIEFS / "AA Debriefs.csv", dtype=str)
+    t = t[t["Status"].str.strip() == "Completed"]
+    svc = t["Job Type"].str.strip().map(AA_JOB_TYPES)
+    out = pd.DataFrame({
+        "date": pd.to_datetime(t["Job Date"], errors="coerce").dt.date,
+        "Station": t["Station"].astype(str).str.strip(),
+        "Service": svc,
+    })
+    return out[out["Service"].notna()]
+
+
+def load_apu():
+    t = pd.read_excel(DEBRIEFS / "APU Wash.xlsx", sheet_name="Sheet2", dtype=str)
+    t.columns = [str(c).strip() for c in t.columns]
+    t = t[t["Status"].str.strip() == "Completed"]
+    return pd.DataFrame({
+        "date": pd.to_datetime(t["Date"], errors="coerce").dt.date,
+        "Location": t["Location"].astype(str).str.strip(),
+    })
+
+
 def load_frontier():
     t = read_table(DEBRIEFS / "Frontier Debriefs.xlsx", "Table1")
     t = t[t["Status"] == "Complete"]
@@ -199,23 +226,27 @@ def load_budget_workbook():
     return out
 
 
-def merge_budget_config(stations, budgets, catalog):
+def merge_budget_config(stations, budgets, catalog, overrides):
     """Build the effective per-station config: the budget workbook decides the
-    station list, service list, and rates; specs come from stations.json when
-    the station+service already exist there, else from the service catalog
-    templates ({LOC} = first 3 letters of the sheet name). Unknown service
-    names fall back to a flat daily budget, with a warning."""
+    station list, service list, and rates; specs come from station_overrides
+    first, then stations.json for pre-existing station+service pairs, then the
+    service catalog templates ({LOC} = first 3 letters of the sheet name).
+    Unknown service names fall back to a flat daily budget, with a warning."""
     merged = {}
     for st_name, rows in budgets.items():
         code = st_name.strip()[:3].upper()
         base = stations.get(st_name)
+        ovr = overrides.get(st_name, {})
+        ovr_services = ovr.get("services", {})
         base_by_name = ({NORM(s["name"]): (i, s) for i, s in enumerate(base["services"])}
                         if base else {})
         base_aircraft = ({r - 3 for r in base["aircraft_service_rows"]} if base else set())
         services = []
         for svc_name, rate in rows:
             key = NORM(svc_name)
-            if key in base_by_name:
+            if key in ovr_services:
+                svc = dict(ovr_services[key])
+            elif key in base_by_name:
                 i, src = base_by_name[key]
                 svc = {k: v for k, v in src.items() if k != "sheet_row"}
                 svc["aircraft"] = (not base["fac_only"]) and i in base_aircraft
@@ -235,7 +266,10 @@ def merge_budget_config(stations, budgets, catalog):
             svc["name"], svc["rate"] = svc_name, rate
             services.append(svc)
         fac_only = all(s["kind"] == "fixed" for s in services)
-        if base:
+        if "labor_keys" in ovr:
+            labor_keys = ovr["labor_keys"]
+            salary_keys = ovr.get("salary_keys", labor_keys)
+        elif base:
             labor_keys, salary_keys = base["labor_keys"], base["salary_keys"]
         else:
             k = f"{code} FAC" if "FAC" in st_name.upper() else f"{code} CABIN"
@@ -443,9 +477,11 @@ def build_month(year, month, stations, tables, hours, emp):
 def main():
     base_stations = json.loads((HERE / "stations.json").read_text())
     catalog = json.loads((HERE / "service_catalog.json").read_text())
+    catalog.update(json.loads((HERE / "catalog_extras.json").read_text()))
+    overrides = json.loads((HERE / "station_overrides.json").read_text())
     budgets = load_budget_workbook()
     print(f"Service Budgets.xlsx: {len(budgets)} location sheets")
-    stations = merge_budget_config(base_stations, budgets, catalog)
+    stations = merge_budget_config(base_stations, budgets, catalog, overrides)
     print("loading sources...")
     tables = {
         "Envoy_Debriefs": load_envoy(),
@@ -455,6 +491,8 @@ def main():
         "Breeze_Debriefs": load_breeze(),
         "Ultra_Debriefs": load_ultra(),
         "Frontier_Debriefs": load_frontier(),
+        "AA_Debriefs": load_aa(),
+        "APU_Wash": load_apu(),
     }
     for k, v in tables.items():
         print(f"  {k}: {len(v)} rows")

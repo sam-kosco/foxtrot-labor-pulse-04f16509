@@ -1,0 +1,37 @@
+{
+  "aaturn": {
+    "name": "AA Turn", "kind": "count", "aircraft": true,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "AA_Debriefs", "sum_col": null,
+       "criteria": [["Station", "{LOC}"], ["Service", "AA Turn"]]}
+    ]
+  },
+  "aaron": {
+    "name": "AA RON", "kind": "count", "aircraft": true,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "AA_Debriefs", "sum_col": null,
+       "criteria": [["Station", "{LOC}"], ["Service", "AA RON"]]}
+    ]
+  },
+  "aasecurity": {
+    "name": "AA Security", "kind": "count", "aircraft": false,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "AA_Debriefs", "sum_col": null,
+       "criteria": [["Station", "{LOC}"], ["Service", "AA Security"]]}
+    ]
+  },
+  "ultra": {
+    "name": "Ultra", "kind": "count", "aircraft": true,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "AA_Debriefs", "sum_col": null,
+       "criteria": [["Station", "{LOC}"], ["Service", "Ultra"]]}
+    ]
+  },
+  "apuwash": {
+    "name": "APU Wash", "kind": "count", "aircraft": true,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "APU_Wash", "sum_col": null,
+       "criteria": [["Location", "{LOC}"]]}
+    ]
+  }
+}
