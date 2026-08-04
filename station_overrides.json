@@ -3,11 +3,18 @@
     "labor_keys": ["STL AA CAB"],
     "salary_keys": ["STL AA CAB"],
     "services": {
+      "ultra": {
+        "kind": "count", "aircraft": true,
+        "specs": [
+          {"fn": "COUNTIFS", "table": "Ultra_Debriefs", "sum_col": null,
+           "criteria": [["Location", "STL"]]}
+        ]
+      },
       "shroudcleaning": {
         "kind": "count", "aircraft": false,
         "specs": [
-          {"fn": "COUNTIFS", "table": "AA_Debriefs", "sum_col": null,
-           "criteria": [["Station", "STL"], ["Service", "Shroud Cleaning"]]}
+          {"fn": "SUMIFS", "table": "Ultra_Debriefs", "sum_col": "Shroud Count",
+           "criteria": [["Location", "STL"]]}
         ]
       }
     }
