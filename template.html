@@ -129,7 +129,10 @@ select:focus{outline:none;border-color:var(--orange)}
         <p><b>Worked Hours</b> = hours punched in Paylocity by hourly employees assigned to
         this station, plus 5.71&nbsp;h/day (40&nbsp;h &divide; 7) for each salaried employee.
         Hover or tap any Worked Hours number for its breakdown. Overnight shifts count toward
-        the day the shift started.</p>
+        the day the shift started. Holiday pay is excluded.</p>
+        <p>A <b>~</b> means some crew hadn&rsquo;t punched out yet when the data was pulled:
+        their hours are estimated from their usual shift length and replaced with the real
+        punches at the next morning&rsquo;s refresh.</p>
         <p>Under budget is good; over budget means the station used more labor than the
         aircraft mix earned. Days that haven&rsquo;t finished yet are grayed out.</p>
       </div>
@@ -264,9 +267,9 @@ function render(){
       return `<div class="cell ${fut?'future':''}">${fmt(S.budgeted[d-1])}</div>`;
     }).join("");
     const wrkCells = days.map(d=>{
-      const fut = d>elapsed;
+      const fut = d>elapsed, hasEst = (S.est[d-1]||0) > 0;
       return `<div class="cell ${fut?'future':''}"><span class="wh" tabindex="0"
-        data-d="${d}">${fmt(S.worked[d-1])}</span></div>`;
+        data-d="${d}">${hasEst?"~":""}${fmt(S.worked[d-1])}</span></div>`;
     }).join("");
     const stats = [];
     if (wk.avg_aircraft!=null) stats.push(`<span><span class="lbl">Avg aircraft/day</span> <b>${fmt(wk.avg_aircraft)}</b></span>`);
@@ -337,11 +340,15 @@ const tip = $("#tip");
 function showTip(el){
   const M = DATA.months[curMonth], S = M.stations[curStation];
   const d = +el.dataset.d, h = S.hourly[d-1], n = S.salary_heads[d-1];
-  const sal = n*40/7;
+  const e = S.est[d-1]||0, en = S.est_n[d-1]||0, sal = n*40/7;
+  const estLine = e > 0
+    ? `<br>In progress: ${en} shift${en===1?"":"s"} not punched out yet,
+       estimated <b>~${fmt(e)} h</b> from usual shift lengths`
+    : "";
   tip.innerHTML = `<div class="t-hd">Worked hours &middot; ${M.label.split(" ")[0]} ${d}</div>
     Hourly punches: <b>${fmt(h)} h</b><br>
-    Salaried: ${n} ${n===1?"person":"people"} &times; 5.71 h = <b>${fmt(sal)} h</b>
-    <div class="t-tot">Total ${fmt(h+sal)} h</div>`;
+    Salaried: ${n} ${n===1?"person":"people"} &times; 5.71 h = <b>${fmt(sal)} h</b>${estLine}
+    <div class="t-tot">Total ${e>0?"~":""}${fmt(h+e+sal)} h</div>`;
   // getBoundingClientRect is in visual px; the zoomed body positions fixed
   // elements in layout px — divide by the zoom factor to convert
   const Z = pageZoom(), r = el.getBoundingClientRect(),

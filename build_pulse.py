@@ -313,18 +313,68 @@ def load_employees():
     return e
 
 
+def hours_file_updated():
+    """When This Years Hours.csv was last regenerated (naive local/Eastern).
+    CI: SharePoint lastModifiedDateTime captured by fetch_sources.py;
+    local: file mtime."""
+    meta = PAYLOCITY / "sources_meta.json"
+    if meta.exists():
+        import json as _json
+        ts = _json.loads(meta.read_text()).get("This Years Hours.csv")
+        if ts:
+            from zoneinfo import ZoneInfo
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            return dt.astimezone(ZoneInfo("America/New_York")).replace(tzinfo=None)
+    return datetime.fromtimestamp((PAYLOCITY / "This Years Hours.csv").stat().st_mtime)
+
+
 def load_hours(emp):
     h = pd.read_csv(PAYLOCITY / "This Years Hours.csv", dtype=str, encoding="cp1252")
     h["work_date"] = pd.to_datetime(h["Work Date"], errors="coerce").dt.date
     h = h[(h["work_date"] >= WINDOW_START) & (h["work_date"] <= TODAY)].copy()
     h["hours"] = pd.to_numeric(h["Summation of Paid Duration (hours)"], errors="coerce").fillna(0)
     punch = pd.to_datetime(h["Punch In Time"], errors="coerce")
+    punched_out = h["Punch Out Time"].fillna("").str.strip() != ""
+
+    # Holiday/PTO credits: punch-in placeholder, no punch-out, but paid hours
+    # already posted. Excluded from worked hours (owner decision, Aug 2026).
+    holiday = punch.notna() & ~punched_out & (h["hours"] > 0)
+    h = h[~holiday].copy()
+    punch = punch[~holiday]
+    punched_out = punched_out[~holiday]
+    print(f"  holiday/PTO rows excluded: {int(holiday.sum())}")
+
     # workbook helper: DAY/MONTH(punch-in − 12h) — overnight shifts credit the
     # day the shift started; rows with no punch-in fall back to Work Date
     shifted = punch - timedelta(hours=12)
     h["attr_date"] = [
         s.date() if pd.notna(s) else w for s, w in zip(shifted, h["work_date"])
     ]
+
+    # Shifts still in progress (punch-in, no punch-out, 0 paid hours) at the
+    # moment the CSV was generated: estimate the day's hours from history —
+    # employee's median closed-shift duration, else location median, else 8 h,
+    # capped at 16. Only shifts that STARTED in the 18 h before the file was
+    # generated qualify (excludes future/scheduled placeholder punches and
+    # long-forgotten open punches). Corrected by real hours at next refresh.
+    updated = hours_file_updated()
+    age_h = (updated - punch).dt.total_seconds() / 3600
+    open_shift = punch.notna() & ~punched_out & (h["hours"] == 0) \
+        & (age_h >= 0) & (age_h <= 18)
+    closed = h[punched_out & (h["hours"] > 0)]
+    emp_med = closed.groupby(closed["Employee Id"].str.strip())["hours"].median()
+    dist_med = closed.groupby(closed["Labor Dist Name"].fillna("").str.strip().str.upper())["hours"].median()
+    def estimate(row):
+        e = emp_med.get(str(row["Employee Id"]).strip())
+        if pd.isna(e) or e is None:
+            e = dist_med.get(str(row["Labor Dist Name"] or "").strip().upper())
+        if pd.isna(e) or e is None:
+            e = 8.0
+        return min(float(e), 16.0)
+    h["est"] = 0.0
+    h.loc[open_shift, "est"] = h[open_shift].apply(estimate, axis=1)
+    print(f"  open shifts estimated: {int(open_shift.sum())} "
+          f"(~{h['est'].sum():.0f} h; file updated {updated:%b %d %I:%M %p})")
     id2dist = dict(zip(emp["id"], emp["labor_dist"]))
     id2pay = dict(zip(emp["id"], emp["pay_type"]))
     eid = h["Employee Id"].str.strip()
@@ -408,11 +458,20 @@ def build_month(year, month, stations, tables, hours, emp):
         keys = [k.upper() for k in (cfg.get("labor_keys") or [cfg["labor_key"]]) if k]
         skeys = [k.upper() for k in (cfg.get("salary_keys") or keys) if k] or keys
         hourly = [0.0] * ndays
+        est = [0.0] * ndays
+        est_n = [0] * ndays
         st_h = hsel[(hsel["labor_dist"].str.upper().isin(keys))
                     & (hsel["pay_type"] == "Hourly")]
         for d, v in st_h.groupby("day")["hours"].sum().items():
             if 1 <= d <= ndays:
                 hourly[d - 1] = float(v)
+        openrows = st_h[st_h["est"] > 0]
+        for d, v in openrows.groupby("day")["est"].sum().items():
+            if 1 <= d <= ndays:
+                est[d - 1] = round(float(v), 2)
+        for d, n in openrows.groupby("day").size().items():
+            if 1 <= d <= ndays:
+                est_n[d - 1] = int(n)
         sal_emp = emp[(emp["pay_type"] == "Salary")
                       & (emp["labor_dist"].str.upper().isin(skeys))]
         sal_counts = []
@@ -420,7 +479,8 @@ def build_month(year, month, stations, tables, hours, emp):
             cut = date(year, month, d)
             n = sum(1 for ld in sal_emp["last_day"] if ld and ld > cut)
             sal_counts.append(n)
-        worked = [round(h + n * 40 / 7, 2) for h, n in zip(hourly, sal_counts)]
+        worked = [round(h + e + n * 40 / 7, 2)
+                  for h, e, n in zip(hourly, est, sal_counts)]
 
         # weekly blocks + stats (avg over elapsed days only)
         weeks = []
@@ -462,6 +522,8 @@ def build_month(year, month, stations, tables, hours, emp):
             "budgeted": [round(b, 2) for b in budgeted],
             "worked": worked,
             "hourly": [round(h, 2) for h in hourly],
+            "est": est,
+            "est_n": est_n,
             "salary_heads": sal_counts,
             "weeks": weeks,
             "mtd": {"budgeted": mtd_b, "worked": mtd_w,
