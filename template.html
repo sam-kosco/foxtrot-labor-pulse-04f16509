@@ -130,9 +130,11 @@ select:focus{outline:none;border-color:var(--orange)}
         this station, plus 5.71&nbsp;h/day (40&nbsp;h &divide; 7) for each salaried employee.
         Hover or tap any Worked Hours number for its breakdown. Overnight shifts count toward
         the day the shift started. Holiday pay is excluded.</p>
-        <p>A <b>~</b> means some crew hadn&rsquo;t punched out yet when the data was pulled:
-        their hours are estimated from their usual shift length and replaced with the real
-        punches at the next morning&rsquo;s refresh.</p>
+        <p>A <b>~</b> means an estimate. On Worked Hours: some crew hadn&rsquo;t punched out
+        yet when the data was pulled, so their hours are estimated from their usual shift
+        length and replaced with real punches at the next refresh. On AA job counts (STL/PVD):
+        AA&rsquo;s system hadn&rsquo;t delivered that day yet, so the 7-day average is shown
+        until it does.</p>
         <p>Under budget is good; over budget means the station used more labor than the
         aircraft mix earned. Days that haven&rsquo;t finished yet are grayed out.</p>
       </div>
@@ -255,16 +257,17 @@ function render(){
     const svcRows = S.services.map((sv,si)=>{
       const cells = days.map(d=>{
         const v = sv.days[d-1], fut = d>elapsed;
+        const isEst = (sv.est_days||[]).includes(d);
         const cls = fut ? "future" : (v ? "" : "zero");
-        return `<div class="cell ${cls}">${fmt(v, sv.kind==="fixed"?1:1)}</div>`;
+        return `<div class="cell ${cls}" ${isEst?'title="AA feed hasn\'t delivered this day yet — 7-day average shown"':""}>${isEst?"~":""}${fmt(v)}</div>`;
       }).join("");
       return `<div class="grow"><div class="cell name" title="${sv.kind==="fixed"
         ? "Flat daily budget"
         : "Aircraft receiving this service, from debrief forms"}">${sv.name}</div>${cells}</div>`;
     }).join("");
     const budCells = days.map(d=>{
-      const fut = d>elapsed;
-      return `<div class="cell ${fut?'future':''}">${fmt(S.budgeted[d-1])}</div>`;
+      const fut = d>elapsed, isEst = (S.aa_est_days||[]).includes(d);
+      return `<div class="cell ${fut?'future':''}" ${isEst?'title="Includes estimated AA job counts"':""}>${isEst?"~":""}${fmt(S.budgeted[d-1])}</div>`;
     }).join("");
     const wrkCells = days.map(d=>{
       const fut = d>elapsed, hasEst = (S.est[d-1]||0) > 0;
@@ -306,6 +309,9 @@ function renderControls(){
     `<button class="mchip ${i===curMonth?'active':''}" data-i="${i}" role="tab"
       aria-selected="${i===curMonth}">${m.label}</button>`).join("");
 }
+
+// Reload every 30 minutes so an open tab can never show stale data
+setInterval(() => location.reload(), 30 * 60 * 1000);
 
 // Scale the page so the 1180px layout fills ~92% of the screen (150% on a
 // 1920px monitor) — same effect as browser zoom. Phones stay 1:1.

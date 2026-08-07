@@ -404,7 +404,37 @@ def month_days(year, month):
     return monthrange(year, month)[1]
 
 
-def build_month(year, month, stations, tables, hours, emp):
+def aa_fill_plan(aa_full):
+    """AA's feed doesn't update automatically (runs through AA's internal
+    system), so past dates can be entirely absent. For each station, any past
+    date with no AA rows gets the 7-day per-service average taken from the 7
+    days ending at the most recent listed date before it (owner decision,
+    Aug 2026). Returns {station: {date: {service: avg}}}."""
+    plans = {}
+    for stn, grp in aa_full.groupby("Station"):
+        dates = {d for d in grp["date"] if d is not None}
+        if not dates:
+            continue
+        fills = {}
+        d = max(min(dates), WINDOW_START)
+        while d < TODAY:
+            if d not in dates:
+                prior = [x for x in dates if x < d]
+                if prior:
+                    ref = max(prior)
+                    win = {ref - timedelta(days=i) for i in range(7)}
+                    sel = grp[grp["date"].isin(win)]
+                    fills[d] = {svc: round(float(n) / 7, 2)
+                                for svc, n in sel.groupby("Service").size().items()}
+            d += timedelta(days=1)
+        if fills:
+            plans[stn] = fills
+            print(f"  AA gap-fill {stn}: {len(fills)} missing day(s) "
+                  f"filled with 7-day averages")
+    return plans
+
+
+def build_month(year, month, stations, tables, hours, emp, aa_plans):
     ndays = month_days(year, month)
     is_current = (year, month) == (TODAY.year, TODAY.month)
     is_past = date(year, month, 1) < date(TODAY.year, TODAY.month, 1)
@@ -426,10 +456,18 @@ def build_month(year, month, stations, tables, hours, emp):
     out = {}
     for st_name, cfg in stations.items():
         days = list(range(1, ndays + 1))
+        code = st_name.strip()[:3].upper()
+        st_fills = aa_plans.get(code, {})
+        aa_est_days = set()
         svc_rows = []
         budgeted = [0.0] * ndays
         for svc in cfg["services"]:
             vals = []
+            # AA-fed service? note its Service criterion for gap-filling
+            aa_svc = next((v for sp in svc.get("specs", [])
+                           if sp["table"] == "AA_Debriefs"
+                           for c, v in sp["criteria"] if c == "Service"), None)
+            svc_est_days = []
             if svc["kind"] == "fixed":
                 for d in days:
                     v = svc["rate"] if (is_past or d < cutoff) else 0
@@ -446,13 +484,20 @@ def build_month(year, month, stations, tables, hours, emp):
                             total += float(t.loc[m, spec["sum_col"]].sum())
                         else:
                             total += int(m.sum())
+                    if aa_svc is not None:
+                        fill = st_fills.get(date(year, month, d))
+                        if fill is not None:
+                            total = fill.get(aa_svc, 0)
+                            svc_est_days.append(d)
+                            aa_est_days.add(d)
                     vals.append(total)
             rate = svc.get("rate") or 0
             for i, v in enumerate(vals):
                 budgeted[i] += (v if svc["kind"] == "fixed" else v * rate)
             svc_rows.append({"name": svc["name"], "kind": svc["kind"],
                              "rate": rate, "days": vals,
-                             "aircraft": svc.get("aircraft", False)})
+                             "aircraft": svc.get("aircraft", False),
+                             "est_days": svc_est_days})
 
         # worked hours: hourly punches + salaried imputation, per day
         keys = [k.upper() for k in (cfg.get("labor_keys") or [cfg["labor_key"]]) if k]
@@ -524,6 +569,7 @@ def build_month(year, month, stations, tables, hours, emp):
             "hourly": [round(h, 2) for h in hourly],
             "est": est,
             "est_n": est_n,
+            "aa_est_days": sorted(aa_est_days),
             "salary_heads": sal_counts,
             "weeks": weeks,
             "mtd": {"budgeted": mtd_b, "worked": mtd_w,
@@ -562,10 +608,11 @@ def main():
     hours = load_hours(emp)
     print(f"  employees: {len(emp)}, punch rows in window: {len(hours)}")
 
+    aa_plans = aa_fill_plan(tables["AA_Debriefs"])
     months = []
     y, m = WINDOW_START.year, WINDOW_START.month
     while (y, m) <= (TODAY.year, TODAY.month):
-        months.append(build_month(y, m, stations, tables, hours, emp))
+        months.append(build_month(y, m, stations, tables, hours, emp, aa_plans))
         m += 1
         if m == 13:
             y, m = y + 1, 1
