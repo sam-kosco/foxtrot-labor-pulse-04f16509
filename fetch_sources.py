@@ -6,6 +6,7 @@ the Foxtrot Report Automation app, same as the compliance trackers.
 """
 import os
 import sys
+import time
 from pathlib import Path
 
 import requests
@@ -65,13 +66,25 @@ def main():
         m = requests.get(base + "?$select=lastModifiedDateTime", headers=hdrs, timeout=30)
         if m.status_code == 200:
             meta[name] = m.json().get("lastModifiedDateTime")
-        r = requests.get(base + ":/content", headers=hdrs, timeout=120)
-        if r.status_code == 200:
-            (OUT / name).write_bytes(r.content)
-            print(f"  ok  {name} ({len(r.content) // 1024} KB, modified {meta.get(name)})")
-        else:
-            failed.append((name, r.status_code))
-            print(f"  FAIL {name}: HTTP {r.status_code}", file=sys.stderr)
+        ok = False
+        for attempt in range(1, 4):
+            try:
+                r = requests.get(base + ":/content", headers=hdrs, timeout=180)
+                if r.status_code == 200:
+                    (OUT / name).write_bytes(r.content)
+                    print(f"  ok  {name} ({len(r.content) // 1024} KB, "
+                          f"modified {meta.get(name)})")
+                    ok = True
+                    break
+                print(f"  retry {name}: HTTP {r.status_code} (attempt {attempt})",
+                      file=sys.stderr)
+            except requests.RequestException as e:
+                print(f"  retry {name}: {type(e).__name__} (attempt {attempt})",
+                      file=sys.stderr)
+            time.sleep(5 * attempt)
+        if not ok:
+            failed.append(name)
+            print(f"  FAIL {name}: giving up after 3 attempts", file=sys.stderr)
     (OUT / "sources_meta.json").write_text(json.dumps(meta, indent=1))
     if failed:
         sys.exit(f"aborting: {len(failed)} downloads failed {failed}")
