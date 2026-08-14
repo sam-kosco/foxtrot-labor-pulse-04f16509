@@ -330,6 +330,9 @@ def hours_file_updated():
 
 def load_hours(emp):
     h = pd.read_csv(PAYLOCITY / "This Years Hours.csv", dtype=str, encoding="cp1252")
+    # Paylocity renamed this column in the Aug 2026 export; accept either name
+    if "Labor Dist Name" not in h.columns and "Cost Center 2 Name" in h.columns:
+        h = h.rename(columns={"Cost Center 2 Name": "Labor Dist Name"})
     h["work_date"] = pd.to_datetime(h["Work Date"], errors="coerce").dt.date
     h = h[(h["work_date"] >= WINDOW_START) & (h["work_date"] <= TODAY)].copy()
     h["hours"] = pd.to_numeric(h["Summation of Paid Duration (hours)"], errors="coerce").fillna(0)
