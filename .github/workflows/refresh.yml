@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write   # commits the rebuilt page back to the repo
+      pages: write      # lets the verify step re-request a stalled Pages build
 
     steps:
       - name: Check out repo
@@ -77,3 +78,45 @@ jobs:
           git add index.html pulse_data.json
           git diff --cached --quiet || git commit -m "chore: refresh pulse [$(date -u '+%Y-%m-%d %H:%M UTC')]"
           git push
+
+      - name: Verify the new build is actually live
+        if: steps.guard.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Committing is not deploying. GitHub Pages deploys have failed with a
+          # 503 or stalled in "building" several times, leaving ops on a stale
+          # page while this workflow reported success. Poll the real site for
+          # this run's build stamp; nudge a rebuild if it stalls; fail loudly if
+          # it never lands.
+          EXPECT=$(grep -oE '"generated": "[^"]+"' index.html | head -1)
+          if [ -z "$EXPECT" ]; then
+            echo "::error::no build stamp found in index.html"; exit 1
+          fi
+          # Derived, not hardcoded, so this survives a repo rename or org move.
+          OWNER=$(echo "${GITHUB_REPOSITORY%%/*}" | tr 'A-Z' 'a-z')
+          SITE="https://${OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
+          echo "waiting for ${SITE} to serve ${EXPECT}"
+
+          nudged=0
+          for i in $(seq 1 40); do            # 40 x 30s = 20 minutes
+            # cache-buster: Pages/CDN serves max-age=600, -L follows a CNAME
+            LIVE=$(curl -sSL --max-time 30 "${SITE}?cb=${GITHUB_RUN_ID}-${i}" \
+                   | grep -oE '"generated": "[^"]+"' | head -1 || true)
+            if [ "$LIVE" = "$EXPECT" ]; then
+              echo "live after $((i * 30))s — ${EXPECT}"; exit 0
+            fi
+            if [ "$i" -eq 10 ] && [ "$nudged" -eq 0 ]; then
+              echo "no deploy after 5 min — requesting a Pages rebuild"
+              gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/builds" >/dev/null \
+                && nudged=1 || echo "rebuild request failed; still polling"
+            fi
+            sleep 30
+          done
+
+          echo "The refresh itself succeeded and committed; this is a Pages"
+          echo "deploy failure. Check githubstatus.com, then re-run this run."
+          gh api "repos/${GITHUB_REPOSITORY}/pages/builds/latest" \
+            --jq '{status, error: .error.message}' || true
+          echo "::error::Pages never served ${EXPECT} after 20 min (site still on ${LIVE:-unknown})"
+          exit 1
