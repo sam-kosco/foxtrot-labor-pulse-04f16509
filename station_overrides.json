@@ -60,6 +60,19 @@
     }
   },
 
+  "FLL FAC": {
+    "services": {
+      "facilitybudget": {
+        "kind": "fixed", "aircraft": false,
+        "_comment": "FLL habitually works ~2 h Saturday and none Sunday. The weekly total still comes from the workbook rate (rate x 7); this only redistributes it, rescaling if the rate is edited. At the current 35.5/day that yields Mon-Fri 49.3, Sat 2, Sun 0.",
+        "dow_shape": {
+          "Mon": 49.3, "Tue": 49.3, "Wed": 49.3, "Thu": 49.3, "Fri": 49.3,
+          "Sat": 2, "Sun": 0
+        }
+      }
+    }
+  },
+
   "PVD AA CAB": {
     "labor_keys": ["PVD AA CAB"],
     "salary_keys": ["PVD AA CAB"]

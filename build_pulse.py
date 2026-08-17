@@ -437,6 +437,37 @@ def month_days(year, month):
     return monthrange(year, month)[1]
 
 
+DOW_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def dow_daily_rates(svc):
+    """Per-weekday budget for a fixed service carrying a `dow_shape` override.
+
+    Some facilities don't staff evenly across the week (FLL FAC works ~2 h on
+    Saturday and nothing on Sunday), so a flat daily rate misstates every day
+    even when the week is right. `dow_shape` says how a week is distributed.
+
+    The Service Budgets workbook stays authoritative: its rate is per-day, so
+    a week is worth rate x 7, and the shape is rescaled to that total. Editing
+    the workbook rate therefore still moves the budget instead of being
+    silently ignored. Returns a list indexed by date.weekday(), or None to
+    keep the flat spread.
+    """
+    shape = svc.get("dow_shape")
+    if not shape:
+        return None
+    unknown = set(shape) - set(DOW_NAMES)
+    if unknown:
+        raise SystemExit(f"dow_shape for {svc.get('name')!r} has unknown "
+                         f"day(s) {sorted(unknown)}; use {DOW_NAMES}")
+    vals = [float(shape.get(n, 0)) for n in DOW_NAMES]
+    total = sum(vals)
+    if total <= 0:
+        return None
+    scale = (float(svc.get("rate") or 0) * 7) / total
+    return [v * scale for v in vals]
+
+
 def aa_fill_plan(aa_full):
     """AA's feed doesn't update automatically (runs through AA's internal
     system), so past dates can be entirely absent. For each station, any past
@@ -507,8 +538,14 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans):
                            for c, v in sp["criteria"] if c == "Service"), None)
             svc_est_days = []
             if svc["kind"] == "fixed":
+                daily = dow_daily_rates(svc)
                 for d in days:
-                    v = svc["rate"] if (is_past or d < cutoff) else 0
+                    elapsed_day = is_past or d < cutoff
+                    if not elapsed_day:
+                        vals.append(0)
+                        continue
+                    v = (daily[date(year, month, d).weekday()] if daily
+                         else svc["rate"])
                     vals.append(round(v or 0, 2))
             else:
                 for d in days:
