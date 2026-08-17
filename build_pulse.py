@@ -182,14 +182,25 @@ def load_aa():
     return out[out["Service"].notna()]
 
 
+# APU Wash Sheet2 replaced its Status column with one numeric column per
+# service (Aug 2026): 1 = completed, 0.5 = cancelled but half billable,
+# 0 = no job. Only a 1 counts toward the pulse.
+APU_SERVICES = ["APU Wash", "Landing Gear Bay Wash", "Partial Belly Wash"]
+
+
 def load_apu():
-    t = pd.read_excel(DEBRIEFS / "APU Wash.xlsx", sheet_name="Sheet2", dtype=str)
+    t = pd.read_excel(DEBRIEFS / "APU Wash.xlsx", sheet_name="Sheet2")
     t.columns = [str(c).strip() for c in t.columns]
-    t = t[t["Status"].str.strip() == "Completed"]
-    return pd.DataFrame({
+    out = pd.DataFrame({
         "date": pd.to_datetime(t["Date"], errors="coerce").dt.date,
         "Location": t["Location"].astype(str).str.strip(),
     })
+    for col in APU_SERVICES:
+        if col not in t.columns:
+            raise SystemExit(f"APU Wash.xlsx Sheet2 is missing column {col!r} "
+                             f"(found {list(t.columns)})")
+        out[col] = (pd.to_numeric(t[col], errors="coerce") == 1).astype(int)
+    return out
 
 
 def load_frontier():
@@ -275,8 +286,13 @@ def merge_budget_config(stations, budgets, catalog, overrides):
             k = f"{code} FAC" if "FAC" in st_name.upper() else f"{code} CABIN"
             labor_keys = salary_keys = [k]
             print(f"  new location {st_name!r}: labor dist {k!r} (convention)")
+        # Facility stations take plain day attribution (no overnight shift-back).
+        # Name test first so a facility that gains a counted service keeps the
+        # right treatment; fac_only covers any future non-"FAC" naming.
+        facility = st_name.strip().upper().endswith("FAC") or fac_only
         merged[st_name] = {"labor_keys": labor_keys, "salary_keys": salary_keys,
-                           "fac_only": fac_only, "services": services}
+                           "fac_only": fac_only, "facility": facility,
+                           "services": services}
     for st in stations:
         if st not in budgets:
             print(f"  !! {st} is in stations.json but has no Service Budgets "
@@ -347,11 +363,21 @@ def load_hours(emp):
     punched_out = punched_out[~holiday]
     print(f"  holiday/PTO rows excluded: {int(holiday.sum())}")
 
-    # workbook helper: DAY/MONTH(punch-in − 12h) — overnight shifts credit the
-    # day the shift started; rows with no punch-in fall back to Work Date
+    # Two day attributions, chosen per station in build_month():
+    #  attr_date       — workbook helper DAY/MONTH(punch-in − 12h). Commercial
+    #                    stations work overnight, so a shift credits the day it
+    #                    started.
+    #  attr_date_plain — the calendar day the punch actually falls in. Facility
+    #                    stations don't run overnight shifts, so shifting back
+    #                    12 h would push a normal day shift onto the day before
+    #                    (owner decision, Aug 2026).
+    # Rows with no punch-in fall back to Work Date in both.
     shifted = punch - timedelta(hours=12)
     h["attr_date"] = [
         s.date() if pd.notna(s) else w for s, w in zip(shifted, h["work_date"])
+    ]
+    h["attr_date_plain"] = [
+        p.date() if pd.notna(p) else w for p, w in zip(punch, h["work_date"])
     ]
 
     # Shifts still in progress (punch-in, no punch-out, 0 paid hours) at the
@@ -453,8 +479,13 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans):
         sel["day"] = [d.day for d in sel["date"]]
         month_tbl[tname] = sel
 
-    hsel = hours[[d.year == year and d.month == month for d in hours["attr_date"]]].copy()
-    hsel["day"] = [d.day for d in hsel["attr_date"]]
+    def month_slice(col):
+        sel = hours[[d.year == year and d.month == month for d in hours[col]]].copy()
+        sel["day"] = [d.day for d in sel[col]]
+        return sel
+
+    hsel_shift = month_slice("attr_date")        # commercial stations
+    hsel_plain = month_slice("attr_date_plain")  # facility stations
 
     out = {}
     for st_name, cfg in stations.items():
@@ -508,6 +539,7 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans):
         hourly = [0.0] * ndays
         est = [0.0] * ndays
         est_n = [0] * ndays
+        hsel = hsel_plain if cfg.get("facility") else hsel_shift
         st_h = hsel[(hsel["labor_dist"].str.upper().isin(keys))
                     & (hsel["pay_type"] == "Hourly")]
         for d, v in st_h.groupby("day")["hours"].sum().items():

@@ -31,7 +31,21 @@
     "name": "APU Wash", "kind": "count", "aircraft": true,
     "specs": [
       {"fn": "COUNTIFS", "table": "APU_Wash", "sum_col": null,
-       "criteria": [["Location", "{LOC}"]]}
+       "criteria": [["Location", "{LOC}"], ["APU Wash", 1]]}
+    ]
+  },
+  "landinggearbaywash": {
+    "name": "Landing Gear Bay Wash", "kind": "count", "aircraft": false,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "APU_Wash", "sum_col": null,
+       "criteria": [["Location", "{LOC}"], ["Landing Gear Bay Wash", 1]]}
+    ]
+  },
+  "partialbellywash": {
+    "name": "Partial Belly Wash", "kind": "count", "aircraft": false,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "APU_Wash", "sum_col": null,
+       "criteria": [["Location", "{LOC}"], ["Partial Belly Wash", 1]]}
     ]
   }
 }
