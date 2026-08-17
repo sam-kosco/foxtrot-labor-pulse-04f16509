@@ -1,4 +1,44 @@
 {
+  "_comment": "Per-station counting rules that differ from the workbook derivation in stations.json. This file wins over stations.json and survives an extract_config.py regen. Ultra Debriefs holds two job types in one table (Service = 'Ultra Cleaning' or 'Shroud Cleaning'); the workbook's Ultra COUNTIFS filtered on Location only, so shroud jobs were double-counted as Ultras. Every Ultra count below filters Service explicitly.",
+
+  "CMH": {
+    "services": {
+      "ultras": {
+        "kind": "count", "aircraft": true,
+        "specs": [
+          {"fn": "COUNTIFS", "table": "Ultra_Debriefs", "sum_col": null,
+           "criteria": [["Location", "CMH"], ["Service", "Ultra Cleaning"]]}
+        ]
+      },
+      "shroudcleaning": {
+        "kind": "count", "aircraft": false,
+        "specs": [
+          {"fn": "SUMIFS", "table": "Ultra_Debriefs", "sum_col": "Shroud Count",
+           "criteria": [["Location", "CMH"], ["Service", "Shroud Cleaning"]]}
+        ]
+      }
+    }
+  },
+
+  "DFW": {
+    "services": {
+      "ultras": {
+        "kind": "count", "aircraft": true,
+        "specs": [
+          {"fn": "COUNTIFS", "table": "Ultra_Debriefs", "sum_col": null,
+           "criteria": [["Location", "DFW"], ["Service", "Ultra Cleaning"]]}
+        ]
+      },
+      "shroudcleaning": {
+        "kind": "count", "aircraft": false,
+        "specs": [
+          {"fn": "SUMIFS", "table": "Ultra_Debriefs", "sum_col": "Shroud Count",
+           "criteria": [["Location", "DFW"], ["Service", "Shroud Cleaning"]]}
+        ]
+      }
+    }
+  },
+
   "STL AA CAB": {
     "labor_keys": ["STL AA CAB"],
     "salary_keys": ["STL AA CAB"],
@@ -7,18 +47,19 @@
         "kind": "count", "aircraft": true,
         "specs": [
           {"fn": "COUNTIFS", "table": "Ultra_Debriefs", "sum_col": null,
-           "criteria": [["Location", "STL"]]}
+           "criteria": [["Location", "STL"], ["Service", "Ultra Cleaning"]]}
         ]
       },
       "shroudcleaning": {
         "kind": "count", "aircraft": false,
         "specs": [
           {"fn": "SUMIFS", "table": "Ultra_Debriefs", "sum_col": "Shroud Count",
-           "criteria": [["Location", "STL"]]}
+           "criteria": [["Location", "STL"], ["Service", "Shroud Cleaning"]]}
         ]
       }
     }
   },
+
   "PVD AA CAB": {
     "labor_keys": ["PVD AA CAB"],
     "salary_keys": ["PVD AA CAB"]

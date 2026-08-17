@@ -157,6 +157,10 @@ def load_ultra():
     out = pd.DataFrame({
         "date": t["Date"].map(to_date),
         "Location": t["Location"].astype(str).str.strip(),
+        # One table holds two job types — "Ultra Cleaning" and "Shroud
+        # Cleaning". Station specs filter on this so shroud jobs aren't
+        # counted as Ultras (the workbook's COUNTIFS filtered Location only).
+        "Service": t["Service"].astype(str).str.strip(),
     })
     shroud = next((c for c in t.columns if c and "Shroud" in str(c)), None)
     out["Shroud Count"] = (
