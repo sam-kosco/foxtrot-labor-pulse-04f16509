@@ -3,7 +3,7 @@
 **Owner:** Samuel Kosco — Data Analyst, Foxtrot Aviation Services
 **Purpose:** Read-only Labor Pulse dashboard for ops — the web replacement for opening `Live Commercial Pulse Sheet.xlsx`. Budgeted vs worked labor hours per station per day, with weekly averages and variance.
 
-The page is intentionally uneditable: ops get a link, not the workbook. The repo name carries a random suffix and the page carries `noindex` because GitHub Pages is public — treat the URL as the access control and share it only internally.
+The page is intentionally uneditable: ops get a link, not the workbook. The repo name carries a random suffix and the page carries `noindex` because the Pages site is public — treat the URL as the access control and share it only internally. Since the org migration the CODE is private (org repo); only the rendered site is public. The platform embeds this site and its JSON feeds the platform homepage stats.
 
 ## How it works
 
@@ -38,3 +38,14 @@ Same three as `envoy-compliance-tracker` (see that repo's CLAUDE.md): `TENANT_ID
 ## Local development
 
 `python build_pulse.py` with no env vars reads the synced Data Hub folder directly. `PULSE_DATA_DIR=sources python build_pulse.py` after `python fetch_sources.py` mimics CI. Open `index.html` — no server needed.
+
+## Org migration (2026-08-19)
+
+Canonical repo: **Foxtrot-Aviation-Services/foxtrot-labor-pulse-04f16509** (private; the Pages
+site is public at `foxtrot-aviation-services.github.io/foxtrot-labor-pulse-04f16509/`). The old
+`sam-kosco.github.io/foxtrot-labor-pulse-04f16509/` URL stays live via a same-named mirror repo
+on Sam's personal account, force-synced by this repo's "Mirror to legacy
+URL" workflow (deploy key in `MIRROR_DEPLOY_KEY`). The mirror has Actions
+DISABLED — never push to it or run anything there. Retire the legacy URL
+(delete the mirror repo + mirror.yml) once the Foxtrot Platform rollout
+replaces old links.
