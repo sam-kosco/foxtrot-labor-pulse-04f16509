@@ -324,6 +324,8 @@ def merge_budget_config(stations, budgets, catalog, overrides):
         facility = st_name.strip().upper().endswith("FAC") or fac_only
         merged[st_name] = {"labor_keys": labor_keys, "salary_keys": salary_keys,
                            "fac_only": fac_only, "facility": facility,
+                           "hours_from_first_debrief":
+                               bool(ovr.get("hours_from_first_debrief")),
                            "services": services}
     for st in stations:
         if st not in budgets:
@@ -526,7 +528,41 @@ def aa_fill_plan(aa_full):
     return plans
 
 
-def build_month(year, month, stations, tables, hours, emp, aa_plans):
+def first_debrief_dates(stations, tables):
+    """Earliest date each flagged station has a counted service on.
+
+    Stations carrying `hours_from_first_debrief` only start counting labor from
+    their first real debrief: the hours before that are implementation and
+    training for a contract that hadn't started, and shouldn't score against
+    the station. Derived from the debrief data (not a hardcoded date) so it
+    corrects itself as debriefs land or are backfilled.
+    """
+    out = {}
+    for st_name, cfg in stations.items():
+        if not cfg.get("hours_from_first_debrief"):
+            continue
+        best = None
+        for svc in cfg["services"]:
+            for spec in svc.get("specs", []):
+                t = tables.get(spec["table"])
+                if t is None or t.empty:
+                    continue
+                m = spec_mask(t, spec)
+                if spec["fn"] == "SUMIFS":
+                    m &= pd.to_numeric(t[spec["sum_col"]],
+                                       errors="coerce").fillna(0) > 0
+                dates = [d for d in t.loc[m, "date"] if d is not None]
+                if dates and (best is None or min(dates) < best):
+                    best = min(dates)
+        out[st_name] = best
+        if best:
+            print(f"  {st_name}: labor counted from first debrief {best}")
+        else:
+            print(f"  !! {st_name}: no debriefs at all — all labor suppressed")
+    return out
+
+
+def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start):
     ndays = month_days(year, month)
     is_current = (year, month) == (TODAY.year, TODAY.month)
     is_past = date(year, month, 1) < date(TODAY.year, TODAY.month, 1)
@@ -628,6 +664,20 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans):
             cut = date(year, month, d)
             n = sum(1 for ld in sal_emp["last_day"] if ld and ld > cut)
             sal_counts.append(n)
+        # Pre-launch labor (before this station's first debrief) is
+        # implementation/training — zero it out rather than score it.
+        pre_launch = []
+        if st_name in hours_start:
+            start = hours_start[st_name]
+            for i, dnum in enumerate(days):
+                if start is None or date(year, month, dnum) < start:
+                    if hourly[i] or est[i] or sal_counts[i]:
+                        pre_launch.append(dnum)
+                    hourly[i] = 0.0
+                    est[i] = 0.0
+                    est_n[i] = 0
+                    sal_counts[i] = 0
+
         worked = [round(h + e + n * 40 / 7, 2)
                   for h, e, n in zip(hourly, est, sal_counts)]
 
@@ -729,10 +779,12 @@ def main():
     print(f"  employees: {len(emp)}, punch rows in window: {len(hours)}")
 
     aa_plans = aa_fill_plan(tables["AA_Debriefs"])
+    hours_start = first_debrief_dates(stations, tables)
     months = []
     y, m = WINDOW_START.year, WINDOW_START.month
     while (y, m) <= (TODAY.year, TODAY.month):
-        months.append(build_month(y, m, stations, tables, hours, emp, aa_plans))
+        months.append(build_month(y, m, stations, tables, hours, emp, aa_plans,
+                                  hours_start))
         m += 1
         if m == 13:
             y, m = y + 1, 1

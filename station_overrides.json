@@ -1,5 +1,5 @@
 {
-  "_comment": "Per-station counting rules that differ from the workbook derivation in stations.json. This file wins over stations.json and survives an extract_config.py regen. Ultra Debriefs holds two job types in one table (Service = 'Ultra Cleaning' or 'Shroud Cleaning'); the workbook's Ultra COUNTIFS filtered on Location only, so shroud jobs were double-counted as Ultras. Every Ultra count below filters Service explicitly.",
+  "_comment": "Per-station counting rules that differ from the workbook derivation in stations.json. This file wins over stations.json and survives an extract_config.py regen. Ultra Debriefs holds two job types in one table (Service = 'Ultra Cleaning' or 'Shroud Cleaning'); the workbook's Ultra COUNTIFS filtered on Location only, so shroud jobs were double-counted as Ultras. Every Ultra count below filters Service explicitly. Stations with hours_from_first_debrief only count labor from their first real debrief onward - earlier hours are implementation and training for a contract that had not started yet (JSX went live 8/1; BNA AA ramped similarly).",
   "CMH": {
     "services": {
       "ultras": {
@@ -274,7 +274,8 @@
           }
         ]
       }
-    }
+    },
+    "hours_from_first_debrief": true
   },
   "BUR-SNA": {
     "labor_keys": [
@@ -467,7 +468,8 @@
           }
         ]
       }
-    }
+    },
+    "hours_from_first_debrief": true
   },
   "TEB-HPN": {
     "labor_keys": [
@@ -660,7 +662,8 @@
           }
         ]
       }
-    }
+    },
+    "hours_from_first_debrief": true
   },
   "DAL": {
     "labor_keys": [
@@ -755,7 +758,8 @@
           }
         ]
       }
-    }
+    },
+    "hours_from_first_debrief": true
   },
   "SCF": {
     "labor_keys": [
@@ -850,6 +854,7 @@
           }
         ]
       }
-    }
+    },
+    "hours_from_first_debrief": true
   }
 }
