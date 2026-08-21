@@ -1,80 +1,783 @@
 {
   "_comment": "Per-station counting rules that differ from the workbook derivation in stations.json. This file wins over stations.json and survives an extract_config.py regen. Ultra Debriefs holds two job types in one table (Service = 'Ultra Cleaning' or 'Shroud Cleaning'); the workbook's Ultra COUNTIFS filtered on Location only, so shroud jobs were double-counted as Ultras. Every Ultra count below filters Service explicitly.",
-
   "CMH": {
     "services": {
       "ultras": {
-        "kind": "count", "aircraft": true,
+        "kind": "count",
+        "aircraft": true,
         "specs": [
-          {"fn": "COUNTIFS", "table": "Ultra_Debriefs", "sum_col": null,
-           "criteria": [["Location", "CMH"], ["Service", "Ultra Cleaning"]]}
+          {
+            "fn": "COUNTIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CMH"
+              ],
+              [
+                "Service",
+                "Ultra Cleaning"
+              ]
+            ]
+          }
         ]
       },
       "shroudcleaning": {
-        "kind": "count", "aircraft": false,
+        "kind": "count",
+        "aircraft": false,
         "specs": [
-          {"fn": "SUMIFS", "table": "Ultra_Debriefs", "sum_col": "Shroud Count",
-           "criteria": [["Location", "CMH"], ["Service", "Shroud Cleaning"]]}
+          {
+            "fn": "SUMIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": "Shroud Count",
+            "criteria": [
+              [
+                "Location",
+                "CMH"
+              ],
+              [
+                "Service",
+                "Shroud Cleaning"
+              ]
+            ]
+          }
         ]
       }
     }
   },
-
   "DFW": {
     "services": {
       "ultras": {
-        "kind": "count", "aircraft": true,
+        "kind": "count",
+        "aircraft": true,
         "specs": [
-          {"fn": "COUNTIFS", "table": "Ultra_Debriefs", "sum_col": null,
-           "criteria": [["Location", "DFW"], ["Service", "Ultra Cleaning"]]}
+          {
+            "fn": "COUNTIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ],
+              [
+                "Service",
+                "Ultra Cleaning"
+              ]
+            ]
+          }
         ]
       },
       "shroudcleaning": {
-        "kind": "count", "aircraft": false,
+        "kind": "count",
+        "aircraft": false,
         "specs": [
-          {"fn": "SUMIFS", "table": "Ultra_Debriefs", "sum_col": "Shroud Count",
-           "criteria": [["Location", "DFW"], ["Service", "Shroud Cleaning"]]}
+          {
+            "fn": "SUMIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": "Shroud Count",
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ],
+              [
+                "Service",
+                "Shroud Cleaning"
+              ]
+            ]
+          }
         ]
       }
     }
   },
-
   "STL AA CAB": {
-    "labor_keys": ["STL AA CAB"],
-    "salary_keys": ["STL AA CAB"],
+    "labor_keys": [
+      "STL AA CAB"
+    ],
+    "salary_keys": [
+      "STL AA CAB"
+    ],
     "services": {
       "ultra": {
-        "kind": "count", "aircraft": true,
+        "kind": "count",
+        "aircraft": true,
         "specs": [
-          {"fn": "COUNTIFS", "table": "Ultra_Debriefs", "sum_col": null,
-           "criteria": [["Location", "STL"], ["Service", "Ultra Cleaning"]]}
+          {
+            "fn": "COUNTIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "STL"
+              ],
+              [
+                "Service",
+                "Ultra Cleaning"
+              ]
+            ]
+          }
         ]
       },
       "shroudcleaning": {
-        "kind": "count", "aircraft": false,
+        "kind": "count",
+        "aircraft": false,
         "specs": [
-          {"fn": "SUMIFS", "table": "Ultra_Debriefs", "sum_col": "Shroud Count",
-           "criteria": [["Location", "STL"], ["Service", "Shroud Cleaning"]]}
+          {
+            "fn": "SUMIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": "Shroud Count",
+            "criteria": [
+              [
+                "Location",
+                "STL"
+              ],
+              [
+                "Service",
+                "Shroud Cleaning"
+              ]
+            ]
+          }
         ]
       }
     }
   },
-
   "FLL FAC": {
     "services": {
       "facilitybudget": {
-        "kind": "fixed", "aircraft": false,
+        "kind": "fixed",
+        "aircraft": false,
         "_comment": "FLL habitually works ~2 h Saturday and none Sunday. The weekly total still comes from the workbook rate (rate x 7); this only redistributes it, rescaling if the rate is edited. At the current 35.5/day that yields Mon-Fri 49.3, Sat 2, Sun 0.",
         "dow_shape": {
-          "Mon": 49.3, "Tue": 49.3, "Wed": 49.3, "Thu": 49.3, "Fri": 49.3,
-          "Sat": 2, "Sun": 0
+          "Mon": 49.3,
+          "Tue": 49.3,
+          "Wed": 49.3,
+          "Thu": 49.3,
+          "Fri": 49.3,
+          "Sat": 2,
+          "Sun": 0
         }
       }
     }
   },
-
   "PVD AA CAB": {
-    "labor_keys": ["PVD AA CAB"],
-    "salary_keys": ["PVD AA CAB"]
+    "labor_keys": [
+      "PVD AA CAB"
+    ],
+    "salary_keys": [
+      "PVD AA CAB"
+    ]
+  },
+  "CLE AA": {
+    "labor_keys": [
+      "CLE AA"
+    ],
+    "salary_keys": [
+      "CLE AA"
+    ],
+    "_comment": "AA ultra station. Labor dist is 'CLE AA', not the <CODE> CABIN convention.",
+    "services": {
+      "ultras": {
+        "kind": "count",
+        "aircraft": true,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CLE"
+              ],
+              [
+                "Service",
+                "Ultra Cleaning"
+              ]
+            ]
+          }
+        ]
+      },
+      "shroudcleaning": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "SUMIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": "Shroud Count",
+            "criteria": [
+              [
+                "Location",
+                "CLE"
+              ],
+              [
+                "Service",
+                "Shroud Cleaning"
+              ]
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "BNA AA": {
+    "labor_keys": [
+      "BNA CABIN"
+    ],
+    "salary_keys": [
+      "BNA CABIN"
+    ],
+    "_comment": "Displayed as BNA AA; labor dist is BNA CABIN. Distinct from the BNA FAC sheet.",
+    "services": {
+      "ultras": {
+        "kind": "count",
+        "aircraft": true,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "BNA"
+              ],
+              [
+                "Service",
+                "Ultra Cleaning"
+              ]
+            ]
+          }
+        ]
+      },
+      "shroudcleaning": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "SUMIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": "Shroud Count",
+            "criteria": [
+              [
+                "Location",
+                "BNA"
+              ],
+              [
+                "Service",
+                "Shroud Cleaning"
+              ]
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "BUR-SNA": {
+    "labor_keys": [
+      "BUR PRIV",
+      "SNA PRIV"
+    ],
+    "salary_keys": [
+      "BUR PRIV",
+      "SNA PRIV"
+    ],
+    "_comment": "JSX. One sheet covering two airports (Excel forbids '/' in sheet names). Debriefs summed over BUR + SNA. NOTE: 'SNA PRIV' does not exist in Paylocity yet - only BUR PRIV contributes worked hours.",
+    "services": {
+      "jsxron": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "BUR"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SNA"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxinteriordetail": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "BUR"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SNA"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxexteriordetail": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "BUR"
+              ],
+              [
+                "Exterior Detail",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SNA"
+              ],
+              [
+                "Exterior Detail",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxcarpetextraction": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "BUR"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SNA"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "TEB-HPN": {
+    "labor_keys": [
+      "TEB CABIN",
+      "HPN CABIN"
+    ],
+    "salary_keys": [
+      "TEB CABIN",
+      "HPN CABIN"
+    ],
+    "_comment": "JSX. Debriefs summed over TEB + HPN.",
+    "services": {
+      "jsxron": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "TEB"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "HPN"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxinteriordetail": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "TEB"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "HPN"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxexteriordetail": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "TEB"
+              ],
+              [
+                "Exterior Detail",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "HPN"
+              ],
+              [
+                "Exterior Detail",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxcarpetextraction": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "TEB"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "HPN"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "DAL": {
+    "labor_keys": [
+      "DAL PRIV"
+    ],
+    "salary_keys": [
+      "DAL PRIV"
+    ],
+    "_comment": "JSX. Labor dist DAL PRIV, not DAL CABIN.",
+    "services": {
+      "jsxron": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAL"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxinteriordetail": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAL"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxexteriordetail": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAL"
+              ],
+              [
+                "Exterior Detail",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxcarpetextraction": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAL"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "SCF": {
+    "labor_keys": [
+      "SCF PRIV"
+    ],
+    "salary_keys": [
+      "SCF PRIV"
+    ],
+    "_comment": "JSX. NOTE: 'SCF PRIV' does not exist in Paylocity yet, so worked hours read 0 until it is created.",
+    "services": {
+      "jsxron": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SCF"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxinteriordetail": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SCF"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxexteriordetail": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SCF"
+              ],
+              [
+                "Exterior Detail",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxcarpetextraction": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SCF"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    }
   }
 }

@@ -207,6 +207,25 @@ def load_apu():
     return out
 
 
+JSX_SERVICES = ["RON", "Interior Detail", "Exterior Detail", "Carpet Extraction"]
+
+
+def load_jsx():
+    """JSX Debriefs 'Debriefs' table: one row per tail serviced, with a 0/1
+    column per service and the airport in 'Service Location'."""
+    t = read_table(DEBRIEFS / "JSX Debriefs.xlsx", "Debriefs")
+    out = pd.DataFrame({
+        "date": t["Date"].map(to_date),
+        "Location": t["Service Location"].astype(str).str.strip().str.upper(),
+    })
+    for col in JSX_SERVICES:
+        if col not in t.columns:
+            raise SystemExit(f"JSX Debriefs is missing column {col!r} "
+                             f"(found {list(t.columns)})")
+        out[col] = (pd.to_numeric(t[col], errors="coerce").fillna(0) == 1).astype(int)
+    return out
+
+
 def load_frontier():
     t = read_table(DEBRIEFS / "Frontier Debriefs.xlsx", "Table1")
     t = t[t["Status"] == "Complete"]
@@ -677,6 +696,7 @@ def main():
         "Frontier_Debriefs": load_frontier(),
         "AA_Debriefs": load_aa(),
         "APU_Wash": load_apu(),
+        "JSX_Debriefs": load_jsx(),
     }
     for k, v in tables.items():
         print(f"  {k}: {len(v)} rows")

@@ -41,6 +41,34 @@
        "criteria": [["Location", "{LOC}"], ["Landing Gear Bay Wash", 1]]}
     ]
   },
+  "jsxron": {
+    "name": "JSX RON", "kind": "count", "aircraft": false,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "JSX_Debriefs", "sum_col": null,
+       "criteria": [["Location", "{LOC}"], ["RON", 1]]}
+    ]
+  },
+  "jsxinteriordetail": {
+    "name": "JSX Interior Detail", "kind": "count", "aircraft": false,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "JSX_Debriefs", "sum_col": null,
+       "criteria": [["Location", "{LOC}"], ["Interior Detail", 1]]}
+    ]
+  },
+  "jsxexteriordetail": {
+    "name": "JSX Exterior Detail", "kind": "count", "aircraft": false,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "JSX_Debriefs", "sum_col": null,
+       "criteria": [["Location", "{LOC}"], ["Exterior Detail", 1]]}
+    ]
+  },
+  "jsxcarpetextraction": {
+    "name": "JSX Carpet Extraction", "kind": "count", "aircraft": false,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "JSX_Debriefs", "sum_col": null,
+       "criteria": [["Location", "{LOC}"], ["Carpet Extraction", 1]]}
+    ]
+  },
   "partialbellywash": {
     "name": "Partial Belly Wash", "kind": "count", "aircraft": false,
     "specs": [
