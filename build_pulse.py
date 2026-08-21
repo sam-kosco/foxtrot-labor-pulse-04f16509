@@ -208,6 +208,10 @@ def load_apu():
 
 
 JSX_SERVICES = ["RON", "Interior Detail", "Exterior Detail", "Carpet Extraction"]
+# Foxtrot took over the JSX contract on 2026-08-01. Rows dated before that are
+# backfilled service history from the previous vendor (they all carry no
+# revenue) — they are not work we performed, so they never count.
+JSX_START = date(2026, 8, 1)
 
 
 def load_jsx():
@@ -223,6 +227,10 @@ def load_jsx():
             raise SystemExit(f"JSX Debriefs is missing column {col!r} "
                              f"(found {list(t.columns)})")
         out[col] = (pd.to_numeric(t[col], errors="coerce").fillna(0) == 1).astype(int)
+    before = len(out)
+    out = out[[d is not None and d >= JSX_START for d in out["date"]]]
+    print(f"  JSX: dropped {before - len(out)} pre-{JSX_START} row(s) "
+          f"(pre-contract service history)")
     return out
 
 
