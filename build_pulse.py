@@ -207,7 +207,8 @@ def load_apu():
     return out
 
 
-JSX_SERVICES = ["RON", "Interior Detail", "Exterior Detail", "Carpet Extraction"]
+JSX_SERVICES = ["RON", "Interior Detail", "Exterior Detail", "Carpet Extraction",
+                "Biohazard"]
 # Foxtrot took over the JSX contract on 2026-08-01. Rows dated before that are
 # backfilled service history from the previous vendor (they all carry no
 # revenue) — they are not work we performed, so they never count.
@@ -685,7 +686,22 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans):
             "label": date(year, month, 1).strftime("%B %Y"), "stations": out}
 
 
+def check_sources_present():
+    """Fail fast and by name if a source the build needs wasn't fetched.
+    Guards against the fetch list and the build drifting apart."""
+    from sources import SOURCE_NAMES
+    roots = {"This Years Hours.csv": PAYLOCITY, "Basic Employee Info.csv": PAYLOCITY,
+             "Location Management.csv": LOCMGMT_DIR, "Service Budgets.xlsx": BUDGETS_DIR}
+    missing = [n for n in SOURCE_NAMES if not (roots.get(n, DEBRIEFS) / n).exists()]
+    if missing:
+        raise SystemExit(
+            "missing source file(s): " + ", ".join(missing) +
+            "\nIf this is CI, check that sources.py lists them and "
+            "fetch_sources.py downloaded them.")
+
+
 def main():
+    check_sources_present()
     base_stations = json.loads((HERE / "stations.json").read_text())
     catalog = json.loads((HERE / "service_catalog.json").read_text())
     catalog.update(json.loads((HERE / "catalog_extras.json").read_text()))

@@ -430,6 +430,42 @@
             ]
           }
         ]
+      },
+      "jsxbiohazard": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "BUR"
+              ],
+              [
+                "Biohazard",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SNA"
+              ],
+              [
+                "Biohazard",
+                1
+              ]
+            ]
+          }
+        ]
       }
     }
   },
@@ -582,6 +618,42 @@
               ],
               [
                 "Carpet Extraction",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxbiohazard": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "TEB"
+              ],
+              [
+                "Biohazard",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "HPN"
+              ],
+              [
+                "Biohazard",
                 1
               ]
             ]

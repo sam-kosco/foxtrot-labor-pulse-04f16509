@@ -69,6 +69,13 @@
        "criteria": [["Location", "{LOC}"], ["Carpet Extraction", 1]]}
     ]
   },
+  "jsxbiohazard": {
+    "name": "JSX Biohazard", "kind": "count", "aircraft": false,
+    "specs": [
+      {"fn": "COUNTIFS", "table": "JSX_Debriefs", "sum_col": null,
+       "criteria": [["Location", "{LOC}"], ["Biohazard", 1]]}
+    ]
+  },
   "partialbellywash": {
     "name": "Partial Belly Wash", "kind": "count", "aircraft": false,
     "specs": [

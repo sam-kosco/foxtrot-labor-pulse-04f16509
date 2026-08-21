@@ -11,28 +11,14 @@ from pathlib import Path
 
 import requests
 
+from sources import SOURCE_FILES as FILES
+
 TENANT_ID = os.environ["TENANT_ID"]
 CLIENT_ID = os.environ["CLIENT_ID"]
 CLIENT_SECRET = os.environ["CLIENT_SECRET"]
 
 # Data Hub document library (drive-relative paths, no "Shared Documents" prefix)
 DRIVE_ID = "b!_bzXaIx86kOufgJN3ih-BaDIDthKYuxJkJtLi1Bm5irGjCEnK-VHSpBRRm3_SDKU"
-
-FILES = [
-    "Paylocity Reports/This Years Hours.csv",
-    "Paylocity Reports/Basic Employee Info.csv",
-    "Power Flows/Debriefs/Envoy Debriefs.xlsx",
-    "Power Flows/Debriefs/GoJet Debriefs.xlsx",
-    "Power Flows/Debriefs/Mesa Debriefs.xlsx",
-    "Power Flows/Debriefs/PSA Debriefs.xlsx",
-    "Power Flows/Debriefs/Breeze Debriefs.xlsx",
-    "Power Flows/Debriefs/Ultra Debriefs.xlsx",
-    "Power Flows/Debriefs/Frontier Debriefs.xlsx",
-    "Power Flows/Debriefs/AA Debriefs.csv",
-    "Power Flows/Debriefs/APU Wash.xlsx",
-    "Power BI Data Sources/Location Management.csv",
-    "Pulse Sheets/Service Budgets.xlsx",
-]
 
 OUT = Path(__file__).parent / "sources"
 
