@@ -471,31 +471,34 @@ DOW_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
 def dow_daily_rates(svc):
-    """Per-weekday budget for a fixed service carrying a `dow_shape` override.
+    """Per-weekday hours for a fixed service that only runs on set days.
 
-    Some facilities don't staff evenly across the week (FLL FAC works ~2 h on
-    Saturday and nothing on Sunday), so a flat daily rate misstates every day
-    even when the week is right. `dow_shape` says how a week is distributed.
+    FLL FAC's facility budget and STL AA CAB's mail run are the same shape -
+    set hours on set weekdays - so they share one mechanism:
 
-    The Service Budgets workbook stays authoritative: its rate is per-day, so
-    a week is worth rate x 7, and the shape is rescaled to that total. Editing
-    the workbook rate therefore still moves the budget instead of being
-    silently ignored. Returns a list indexed by date.weekday(), or None to
-    keep the flat spread.
+      dow_days       weekdays the workbook rate applies to; every other day
+                     is 0. (Mail Running: 8 h Mon-Fri, nothing at weekends.)
+      dow_overrides  per-day hours replacing the rate on named days, for a
+                     day that runs at a different level. (FLL FAC: the 2 h
+                     Saturday half-shift.)
+
+    The workbook rate keeps its plain meaning - "hours on a normal working
+    day" - so editing Service Budgets.xlsx still moves the budget. Returns a
+    list indexed by date.weekday(), or None for a flat every-day rate.
     """
-    shape = svc.get("dow_shape")
-    if not shape:
+    days_on = svc.get("dow_days")
+    over = svc.get("dow_overrides") or {}
+    if not days_on and not over:
         return None
-    unknown = set(shape) - set(DOW_NAMES)
-    if unknown:
-        raise SystemExit(f"dow_shape for {svc.get('name')!r} has unknown "
-                         f"day(s) {sorted(unknown)}; use {DOW_NAMES}")
-    vals = [float(shape.get(n, 0)) for n in DOW_NAMES]
-    total = sum(vals)
-    if total <= 0:
-        return None
-    scale = (float(svc.get("rate") or 0) * 7) / total
-    return [v * scale for v in vals]
+    for key, names in (("dow_days", days_on or []), ("dow_overrides", over)):
+        unknown = set(names) - set(DOW_NAMES)
+        if unknown:
+            raise SystemExit(f"{key} for {svc.get('name')!r} has unknown "
+                             f"day(s) {sorted(unknown)}; use {DOW_NAMES}")
+    rate = float(svc.get("rate") or 0)
+    return [float(over[n]) if n in over
+            else (rate if days_on and n in days_on else 0.0)
+            for n in DOW_NAMES]
 
 
 def aa_fill_plan(aa_full):

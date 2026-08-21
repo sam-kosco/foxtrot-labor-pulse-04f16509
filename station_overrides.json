@@ -141,6 +141,18 @@
             ]
           }
         ]
+      },
+      "mailrunning": {
+        "kind": "fixed",
+        "aircraft": false,
+        "_comment": "Standing mail run: the workbook rate is hours on a working day (8), Mon-Fri only, nothing at the weekend.",
+        "dow_days": [
+          "Mon",
+          "Tue",
+          "Wed",
+          "Thu",
+          "Fri"
+        ]
       }
     }
   },
@@ -149,15 +161,16 @@
       "facilitybudget": {
         "kind": "fixed",
         "aircraft": false,
-        "_comment": "FLL habitually works ~2 h Saturday and none Sunday. The weekly total still comes from the workbook rate (rate x 7); this only redistributes it, rescaling if the rate is edited. At the current 35.5/day that yields Mon-Fri 49.3, Sat 2, Sun 0.",
-        "dow_shape": {
-          "Mon": 49.3,
-          "Tue": 49.3,
-          "Wed": 49.3,
-          "Thu": 49.3,
-          "Fri": 49.3,
-          "Sat": 2,
-          "Sun": 0
+        "_comment": "Set hours on set weekdays: the workbook rate is the normal working-day budget (49.3), with a 2 h Saturday half-shift and no Sunday run. Weekly total 248.5.",
+        "dow_days": [
+          "Mon",
+          "Tue",
+          "Wed",
+          "Thu",
+          "Fri"
+        ],
+        "dow_overrides": {
+          "Sat": 2
         }
       }
     }
