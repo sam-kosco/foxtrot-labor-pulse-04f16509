@@ -339,6 +339,8 @@ def merge_budget_config(stations, budgets, catalog, overrides):
                            "fac_only": fac_only, "facility": facility,
                            "hours_from_first_debrief":
                                bool(ovr.get("hours_from_first_debrief")),
+                           "labor_from_first_debrief":
+                               ovr.get("labor_from_first_debrief"),
                            "services": services}
     for st in stations:
         if st not in budgets:
@@ -578,7 +580,54 @@ def first_debrief_dates(stations, tables):
     return out
 
 
-def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start):
+def labor_gate_dates(stations, tables):
+    """Per-labor-dist start dates, for a station that pools several cost
+    centres where only some had a launch.
+
+    DFW-DAL is the case: DFW has traded for months, but DAL only went live
+    with JSX on its first debrief, and the labour charged to DAL PRIV before
+    that (mostly imputed salaried time) is implementation, not performance.
+    Gating the whole station would erase DFW's real history, so the station
+    names which labor dist is gated and which services date its launch:
+
+        "labor_from_first_debrief": {"DAL PRIV": ["jsxron", ...]}
+
+    Returns {station: {LABOR DIST: date}}; dates are derived, not hardcoded.
+    """
+    out = {}
+    for st_name, cfg in stations.items():
+        rules = cfg.get("labor_from_first_debrief") or {}
+        if not rules:
+            continue
+        by_key = {NORM(s["name"]): s for s in cfg["services"]}
+        gates = {}
+        for dist, svc_keys in rules.items():
+            best = None
+            for k in svc_keys:
+                svc = by_key.get(NORM(k))
+                if not svc:
+                    print(f"  !! {st_name}: labor gate names unknown service {k!r}")
+                    continue
+                for spec in svc.get("specs", []):
+                    t = tables.get(spec["table"])
+                    if t is None or t.empty:
+                        continue
+                    m = spec_mask(t, spec)
+                    if spec["fn"] == "SUMIFS":
+                        m &= pd.to_numeric(t[spec["sum_col"]],
+                                           errors="coerce").fillna(0) > 0
+                    dates = [d for d in t.loc[m, "date"] if d is not None]
+                    if dates and (best is None or min(dates) < best):
+                        best = min(dates)
+            gates[dist.upper()] = best
+            print(f"  {st_name}: {dist} labor counted from "
+                  f"{best if best else 'never (no debriefs yet)'}")
+        out[st_name] = gates
+    return out
+
+
+def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start,
+                labor_gates):
     ndays = month_days(year, month)
     is_current = (year, month) == (TODAY.year, TODAY.month)
     is_past = date(year, month, 1) < date(TODAY.year, TODAY.month, 1)
@@ -661,25 +710,40 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start
         est = [0.0] * ndays
         est_n = [0] * ndays
         hsel = hsel_plain if cfg.get("facility") else hsel_shift
-        st_h = hsel[(hsel["labor_dist"].str.upper().isin(keys))
-                    & (hsel["pay_type"] == "Hourly")]
-        for d, v in st_h.groupby("day")["hours"].sum().items():
-            if 1 <= d <= ndays:
-                hourly[d - 1] = float(v)
-        openrows = st_h[st_h["est"] > 0]
-        for d, v in openrows.groupby("day")["est"].sum().items():
-            if 1 <= d <= ndays:
-                est[d - 1] = round(float(v), 2)
-        for d, n in openrows.groupby("day").size().items():
-            if 1 <= d <= ndays:
-                est_n[d - 1] = int(n)
-        sal_emp = emp[(emp["pay_type"] == "Salary")
-                      & (emp["labor_dist"].str.upper().isin(skeys))]
-        sal_counts = []
-        for d in days:
-            cut = date(year, month, d)
-            n = sum(1 for ld in sal_emp["last_day"] if ld and ld > cut)
-            sal_counts.append(n)
+        gates = labor_gates.get(st_name, {})
+
+        def gated_out(dist, dnum):
+            g = gates.get(dist)
+            return dist in gates and (g is None or date(year, month, dnum) < g)
+
+        hourly_pool = hsel[hsel["pay_type"] == "Hourly"]
+        for key in keys:
+            sub = hourly_pool[hourly_pool["labor_dist"].str.upper() == key]
+            if sub.empty:
+                continue
+            for d, v in sub.groupby("day")["hours"].sum().items():
+                if 1 <= d <= ndays and not gated_out(key, d):
+                    hourly[d - 1] += float(v)
+            openrows = sub[sub["est"] > 0]
+            for d, v in openrows.groupby("day")["est"].sum().items():
+                if 1 <= d <= ndays and not gated_out(key, d):
+                    est[d - 1] = round(est[d - 1] + float(v), 2)
+            for d, n in openrows.groupby("day").size().items():
+                if 1 <= d <= ndays and not gated_out(key, d):
+                    est_n[d - 1] += int(n)
+
+        sal_counts = [0] * ndays
+        for skey in skeys:
+            sal_emp = emp[(emp["pay_type"] == "Salary")
+                          & (emp["labor_dist"].str.upper() == skey)]
+            if sal_emp.empty:
+                continue
+            for i, dnum in enumerate(days):
+                if gated_out(skey, dnum):
+                    continue
+                cut = date(year, month, dnum)
+                sal_counts[i] += sum(1 for ld in sal_emp["last_day"]
+                                     if ld and ld > cut)
         # Pre-launch labor (before this station's first debrief) is
         # implementation/training — zero it out rather than score it.
         pre_launch = []
@@ -796,11 +860,12 @@ def main():
 
     aa_plans = aa_fill_plan(tables["AA_Debriefs"])
     hours_start = first_debrief_dates(stations, tables)
+    labor_gates = labor_gate_dates(stations, tables)
     months = []
     y, m = WINDOW_START.year, WINDOW_START.month
     while (y, m) <= (TODAY.year, TODAY.month):
         months.append(build_month(y, m, stations, tables, hours, emp, aa_plans,
-                                  hours_start))
+                                  hours_start, labor_gates))
         m += 1
         if m == 13:
             y, m = y + 1, 1

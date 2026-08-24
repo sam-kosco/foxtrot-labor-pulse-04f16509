@@ -46,52 +46,6 @@
       }
     }
   },
-  "DFW": {
-    "services": {
-      "ultras": {
-        "kind": "count",
-        "aircraft": true,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "Ultra_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "DFW"
-              ],
-              [
-                "Service",
-                "Ultra Cleaning"
-              ]
-            ]
-          }
-        ]
-      },
-      "shroudcleaning": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "SUMIFS",
-            "table": "Ultra_Debriefs",
-            "sum_col": "Shroud Count",
-            "criteria": [
-              [
-                "Location",
-                "DFW"
-              ],
-              [
-                "Service",
-                "Shroud Cleaning"
-              ]
-            ]
-          }
-        ]
-      }
-    }
-  },
   "STL AA CAB": {
     "labor_keys": [
       "STL AA CAB"
@@ -678,102 +632,6 @@
     },
     "hours_from_first_debrief": true
   },
-  "DAL": {
-    "labor_keys": [
-      "DAL PRIV"
-    ],
-    "salary_keys": [
-      "DAL PRIV"
-    ],
-    "_comment": "JSX. Labor dist DAL PRIV, not DAL CABIN.",
-    "services": {
-      "jsxron": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "DAL"
-              ],
-              [
-                "RON",
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "jsxinteriordetail": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "DAL"
-              ],
-              [
-                "Interior Detail",
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "jsxexteriordetail": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "DAL"
-              ],
-              [
-                "Exterior Detail",
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "jsxcarpetextraction": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "DAL"
-              ],
-              [
-                "Carpet Extraction",
-                1
-              ]
-            ]
-          }
-        ]
-      }
-    },
-    "hours_from_first_debrief": true
-  },
   "SCF": {
     "labor_keys": [
       "SCF PRIV"
@@ -869,5 +727,174 @@
       }
     },
     "hours_from_first_debrief": true
+  },
+  "DFW-DAL": {
+    "labor_keys": [
+      "DFW CABIN",
+      "DAL PRIV"
+    ],
+    "salary_keys": [
+      "DFW CABIN",
+      "DAL PRIV"
+    ],
+    "_comment": "DFW and DAL merged into one page (Aug 2026): the DFW team does much of the DAL work, so budgets and labor are pooled. Sheet name starts 'DFW', so {LOC} resolves to DFW for the Envoy/Frontier/Regional services taken from the catalog; the Ultra and JSX services are pinned explicitly because Ultras must filter Service and the JSX jobs are logged under DAL, not DFW. Deliberately NOT hours_from_first_debrief: DAL alone carried that flag, and applying it here would erase every DFW hour before DAL's first debrief.",
+    "services": {
+      "ultras": {
+        "kind": "count",
+        "aircraft": true,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ],
+              [
+                "Service",
+                "Ultra Cleaning"
+              ]
+            ]
+          }
+        ]
+      },
+      "shroudcleaning": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "SUMIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": "Shroud Count",
+            "criteria": [
+              [
+                "Location",
+                "DFW"
+              ],
+              [
+                "Service",
+                "Shroud Cleaning"
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxron": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAL"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxinteriordetail": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAL"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxcarpetextraction": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAL"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxexteriordetail145": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAL"
+              ],
+              [
+                "Exterior Detail 145",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxexteriordetailatr": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "DAL"
+              ],
+              [
+                "Exterior Detail ATR",
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    "labor_from_first_debrief": {
+      "DAL PRIV": [
+        "jsxron",
+        "jsxinteriordetail",
+        "jsxcarpetextraction",
+        "jsxexteriordetail145",
+        "jsxexteriordetailatr"
+      ]
+    }
   }
 }
