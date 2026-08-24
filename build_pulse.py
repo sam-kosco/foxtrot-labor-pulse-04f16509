@@ -207,8 +207,7 @@ def load_apu():
     return out
 
 
-JSX_SERVICES = ["RON", "Interior Detail", "Exterior Detail", "Carpet Extraction",
-                "Biohazard"]
+JSX_SERVICES = ["RON", "Interior Detail", "Exterior Detail", "Carpet Extraction"]
 # Foxtrot took over the JSX contract on 2026-08-01. Rows dated before that are
 # backfilled service history from the previous vendor (they all carry no
 # revenue) — they are not work we performed, so they never count.
@@ -222,12 +221,26 @@ def load_jsx():
     out = pd.DataFrame({
         "date": t["Date"].map(to_date),
         "Location": t["Service Location"].astype(str).str.strip().str.upper(),
+        "Plane Type": t["Plane Type"].astype(str).str.strip(),
     })
     for col in JSX_SERVICES:
         if col not in t.columns:
             raise SystemExit(f"JSX Debriefs is missing column {col!r} "
                              f"(found {list(t.columns)})")
         out[col] = (pd.to_numeric(t[col], errors="coerce").fillna(0) == 1).astype(int)
+
+    # Exterior details are priced by airframe (Aug 2026): ATR or, for anything
+    # else, the 145 rate. "Anything else" is deliberate per the owner — an
+    # unreadable Plane Type (the debrief carries the odd "#N/A") lands in 145
+    # rather than being dropped.
+    is_atr = out["Plane Type"].str.upper().str.contains("ATR", na=False)
+    ed = out["Exterior Detail"] == 1
+    out["Exterior Detail ATR"] = (ed & is_atr).astype(int)
+    out["Exterior Detail 145"] = (ed & ~is_atr).astype(int)
+    odd = sorted(set(out.loc[ed & ~is_atr, "Plane Type"]) - {"EMB 145", "EMB 135"})
+    if odd:
+        print(f"  JSX: exterior details with unrecognised Plane Type counted "
+              f"as 145: {odd}")
     before = len(out)
     out = out[[d is not None and d >= JSX_START for d in out["date"]]]
     print(f"  JSX: dropped {before - len(out)} pre-{JSX_START} row(s) "

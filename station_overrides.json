@@ -373,42 +373,6 @@
           }
         ]
       },
-      "jsxexteriordetail": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "BUR"
-              ],
-              [
-                "Exterior Detail",
-                1
-              ]
-            ]
-          },
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "SNA"
-              ],
-              [
-                "Exterior Detail",
-                1
-              ]
-            ]
-          }
-        ]
-      },
       "jsxcarpetextraction": {
         "kind": "count",
         "aircraft": false,
@@ -445,7 +409,7 @@
           }
         ]
       },
-      "jsxbiohazard": {
+      "jsxexteriordetail145": {
         "kind": "count",
         "aircraft": false,
         "specs": [
@@ -459,7 +423,7 @@
                 "BUR"
               ],
               [
-                "Biohazard",
+                "Exterior Detail 145",
                 1
               ]
             ]
@@ -474,7 +438,43 @@
                 "SNA"
               ],
               [
-                "Biohazard",
+                "Exterior Detail 145",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxexteriordetailatr": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "BUR"
+              ],
+              [
+                "Exterior Detail ATR",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "SNA"
+              ],
+              [
+                "Exterior Detail ATR",
                 1
               ]
             ]
@@ -567,42 +567,6 @@
           }
         ]
       },
-      "jsxexteriordetail": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "TEB"
-              ],
-              [
-                "Exterior Detail",
-                1
-              ]
-            ]
-          },
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "HPN"
-              ],
-              [
-                "Exterior Detail",
-                1
-              ]
-            ]
-          }
-        ]
-      },
       "jsxcarpetextraction": {
         "kind": "count",
         "aircraft": false,
@@ -639,7 +603,7 @@
           }
         ]
       },
-      "jsxbiohazard": {
+      "jsxexteriordetail145": {
         "kind": "count",
         "aircraft": false,
         "specs": [
@@ -653,7 +617,7 @@
                 "TEB"
               ],
               [
-                "Biohazard",
+                "Exterior Detail 145",
                 1
               ]
             ]
@@ -668,7 +632,43 @@
                 "HPN"
               ],
               [
-                "Biohazard",
+                "Exterior Detail 145",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "jsxexteriordetailatr": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "TEB"
+              ],
+              [
+                "Exterior Detail ATR",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "HPN"
+              ],
+              [
+                "Exterior Detail ATR",
                 1
               ]
             ]

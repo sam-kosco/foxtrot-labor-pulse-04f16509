@@ -1,86 +1,266 @@
 {
   "aaturn": {
-    "name": "AA Turn", "kind": "count", "aircraft": true,
+    "name": "AA Turn",
+    "kind": "count",
+    "aircraft": true,
     "specs": [
-      {"fn": "COUNTIFS", "table": "AA_Debriefs", "sum_col": null,
-       "criteria": [["Station", "{LOC}"], ["Service", "AA Turn"]]}
+      {
+        "fn": "COUNTIFS",
+        "table": "AA_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Station",
+            "{LOC}"
+          ],
+          [
+            "Service",
+            "AA Turn"
+          ]
+        ]
+      }
     ]
   },
   "aaron": {
-    "name": "AA RON", "kind": "count", "aircraft": true,
+    "name": "AA RON",
+    "kind": "count",
+    "aircraft": true,
     "specs": [
-      {"fn": "COUNTIFS", "table": "AA_Debriefs", "sum_col": null,
-       "criteria": [["Station", "{LOC}"], ["Service", "AA RON"]]}
+      {
+        "fn": "COUNTIFS",
+        "table": "AA_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Station",
+            "{LOC}"
+          ],
+          [
+            "Service",
+            "AA RON"
+          ]
+        ]
+      }
     ]
   },
   "aasecurity": {
-    "name": "AA Security", "kind": "count", "aircraft": false,
+    "name": "AA Security",
+    "kind": "count",
+    "aircraft": false,
     "specs": [
-      {"fn": "COUNTIFS", "table": "AA_Debriefs", "sum_col": null,
-       "criteria": [["Station", "{LOC}"], ["Service", "AA Security"]]}
+      {
+        "fn": "COUNTIFS",
+        "table": "AA_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Station",
+            "{LOC}"
+          ],
+          [
+            "Service",
+            "AA Security"
+          ]
+        ]
+      }
     ]
   },
   "ultra": {
-    "name": "Ultra", "kind": "count", "aircraft": true,
+    "name": "Ultra",
+    "kind": "count",
+    "aircraft": true,
     "specs": [
-      {"fn": "COUNTIFS", "table": "AA_Debriefs", "sum_col": null,
-       "criteria": [["Station", "{LOC}"], ["Service", "Ultra"]]}
+      {
+        "fn": "COUNTIFS",
+        "table": "AA_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Station",
+            "{LOC}"
+          ],
+          [
+            "Service",
+            "Ultra"
+          ]
+        ]
+      }
     ]
   },
   "apuwash": {
-    "name": "APU Wash", "kind": "count", "aircraft": true,
+    "name": "APU Wash",
+    "kind": "count",
+    "aircraft": true,
     "specs": [
-      {"fn": "COUNTIFS", "table": "APU_Wash", "sum_col": null,
-       "criteria": [["Location", "{LOC}"], ["APU Wash", 1]]}
+      {
+        "fn": "COUNTIFS",
+        "table": "APU_Wash",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "APU Wash",
+            1
+          ]
+        ]
+      }
     ]
   },
   "landinggearbaywash": {
-    "name": "Landing Gear Bay Wash", "kind": "count", "aircraft": false,
+    "name": "Landing Gear Bay Wash",
+    "kind": "count",
+    "aircraft": false,
     "specs": [
-      {"fn": "COUNTIFS", "table": "APU_Wash", "sum_col": null,
-       "criteria": [["Location", "{LOC}"], ["Landing Gear Bay Wash", 1]]}
+      {
+        "fn": "COUNTIFS",
+        "table": "APU_Wash",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Landing Gear Bay Wash",
+            1
+          ]
+        ]
+      }
     ]
   },
   "jsxron": {
-    "name": "JSX RON", "kind": "count", "aircraft": false,
+    "name": "JSX RON",
+    "kind": "count",
+    "aircraft": false,
     "specs": [
-      {"fn": "COUNTIFS", "table": "JSX_Debriefs", "sum_col": null,
-       "criteria": [["Location", "{LOC}"], ["RON", 1]]}
+      {
+        "fn": "COUNTIFS",
+        "table": "JSX_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "RON",
+            1
+          ]
+        ]
+      }
     ]
   },
   "jsxinteriordetail": {
-    "name": "JSX Interior Detail", "kind": "count", "aircraft": false,
+    "name": "JSX Interior Detail",
+    "kind": "count",
+    "aircraft": false,
     "specs": [
-      {"fn": "COUNTIFS", "table": "JSX_Debriefs", "sum_col": null,
-       "criteria": [["Location", "{LOC}"], ["Interior Detail", 1]]}
-    ]
-  },
-  "jsxexteriordetail": {
-    "name": "JSX Exterior Detail", "kind": "count", "aircraft": false,
-    "specs": [
-      {"fn": "COUNTIFS", "table": "JSX_Debriefs", "sum_col": null,
-       "criteria": [["Location", "{LOC}"], ["Exterior Detail", 1]]}
+      {
+        "fn": "COUNTIFS",
+        "table": "JSX_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Interior Detail",
+            1
+          ]
+        ]
+      }
     ]
   },
   "jsxcarpetextraction": {
-    "name": "JSX Carpet Extraction", "kind": "count", "aircraft": false,
+    "name": "JSX Carpet Extraction",
+    "kind": "count",
+    "aircraft": false,
     "specs": [
-      {"fn": "COUNTIFS", "table": "JSX_Debriefs", "sum_col": null,
-       "criteria": [["Location", "{LOC}"], ["Carpet Extraction", 1]]}
-    ]
-  },
-  "jsxbiohazard": {
-    "name": "JSX Biohazard", "kind": "count", "aircraft": false,
-    "specs": [
-      {"fn": "COUNTIFS", "table": "JSX_Debriefs", "sum_col": null,
-       "criteria": [["Location", "{LOC}"], ["Biohazard", 1]]}
+      {
+        "fn": "COUNTIFS",
+        "table": "JSX_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Carpet Extraction",
+            1
+          ]
+        ]
+      }
     ]
   },
   "partialbellywash": {
-    "name": "Partial Belly Wash", "kind": "count", "aircraft": false,
+    "name": "Partial Belly Wash",
+    "kind": "count",
+    "aircraft": false,
     "specs": [
-      {"fn": "COUNTIFS", "table": "APU_Wash", "sum_col": null,
-       "criteria": [["Location", "{LOC}"], ["Partial Belly Wash", 1]]}
+      {
+        "fn": "COUNTIFS",
+        "table": "APU_Wash",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Partial Belly Wash",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "jsxexteriordetail145": {
+    "name": "JSX Exterior Detail 145",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "JSX_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Exterior Detail 145",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "jsxexteriordetailatr": {
+    "name": "JSX Exterior Detail ATR",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "JSX_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Exterior Detail ATR",
+            1
+          ]
+        ]
+      }
     ]
   }
 }
