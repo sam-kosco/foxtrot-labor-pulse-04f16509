@@ -137,59 +137,6 @@
       "PVD AA CAB"
     ]
   },
-  "CLE AA": {
-    "labor_keys": [
-      "CLE AA"
-    ],
-    "salary_keys": [
-      "CLE AA"
-    ],
-    "_comment": "AA ultra station. Labor dist is 'CLE AA', not the <CODE> CABIN convention.",
-    "services": {
-      "ultras": {
-        "kind": "count",
-        "aircraft": true,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "Ultra_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "CLE"
-              ],
-              [
-                "Service",
-                "Ultra Cleaning"
-              ]
-            ]
-          }
-        ]
-      },
-      "shroudcleaning": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "SUMIFS",
-            "table": "Ultra_Debriefs",
-            "sum_col": "Shroud Count",
-            "criteria": [
-              [
-                "Location",
-                "CLE"
-              ],
-              [
-                "Service",
-                "Shroud Cleaning"
-              ]
-            ]
-          }
-        ]
-      }
-    }
-  },
   "BNA AA": {
     "labor_keys": [
       "BNA CABIN"
@@ -895,6 +842,74 @@
         "jsxexteriordetail145",
         "jsxexteriordetailatr"
       ]
+    }
+  },
+  "CLE DAY": {
+    "labor_keys": [
+      "CLE AA"
+    ],
+    "salary_keys": [],
+    "shift_window": {
+      "from": 7,
+      "to": 19
+    },
+    "_comment": "CLE's one labor dist (CLE AA) is split into two crews by punch-in clock hour. DAY takes punches starting 07:00-18:59 local and carries no salaried imputation - the single CLE AA salaried head is assigned to NIGHT. Day shifts get plain calendar-day attribution (a 7 AM start belongs to that day, not the previous one). Budget is the facility share on the CLE DAY sheet; all Ultra and Frontier work belongs to NIGHT."
+  },
+  "CLE NIGHT": {
+    "labor_keys": [
+      "CLE AA"
+    ],
+    "salary_keys": [
+      "CLE AA"
+    ],
+    "shift_window": {
+      "from": 19,
+      "to": 7
+    },
+    "_comment": "NIGHT takes CLE AA punches starting 19:00-06:59 local plus ALL CLE AA salaried time. The window wraps midnight, so it keeps the punch-in-minus-12h attribution that groups an overnight shift onto the day it started. Carries the Ultra, Shroud and Frontier work plus its share of the facility budget.",
+    "services": {
+      "ultras": {
+        "kind": "count",
+        "aircraft": true,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "CLE"
+              ],
+              [
+                "Service",
+                "Ultra Cleaning"
+              ]
+            ]
+          }
+        ]
+      },
+      "shroudcleaning": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "SUMIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": "Shroud Count",
+            "criteria": [
+              [
+                "Location",
+                "CLE"
+              ],
+              [
+                "Service",
+                "Shroud Cleaning"
+              ]
+            ]
+          }
+        ]
+      }
     }
   }
 }

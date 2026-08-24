@@ -341,6 +341,7 @@ def merge_budget_config(stations, budgets, catalog, overrides):
                                bool(ovr.get("hours_from_first_debrief")),
                            "labor_from_first_debrief":
                                ovr.get("labor_from_first_debrief"),
+                           "shift_window": ovr.get("shift_window"),
                            "services": services}
     for st in stations:
         if st not in budgets:
@@ -428,6 +429,10 @@ def load_hours(emp):
     h["attr_date_plain"] = [
         p.date() if pd.notna(p) else w for p, w in zip(punch, h["work_date"])
     ]
+    # Local clock hour the shift began, for stations split into day/night
+    # crews sharing one labor dist (CLE DAY / CLE NIGHT). Punch times are
+    # already station-local in the Paylocity export. -1 = no punch-in.
+    h["punch_hour"] = [int(p.hour) if pd.notna(p) else -1 for p in punch]
 
     # Shifts still in progress (punch-in, no punch-out, 0 paid hours) at the
     # moment the CSV was generated: estimate the day's hours from history —
@@ -705,11 +710,26 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start
 
         # worked hours: hourly punches + salaried imputation, per day
         keys = [k.upper() for k in (cfg.get("labor_keys") or [cfg["labor_key"]]) if k]
-        skeys = [k.upper() for k in (cfg.get("salary_keys") or keys) if k] or keys
+        if isinstance(cfg.get("salary_keys"), list):
+            # an explicit [] means this crew carries no salaried imputation
+            skeys = [k.upper() for k in cfg["salary_keys"] if k]
+        else:
+            skeys = keys
         hourly = [0.0] * ndays
         est = [0.0] * ndays
         est_n = [0] * ndays
-        hsel = hsel_plain if cfg.get("facility") else hsel_shift
+        # A crew whose window wraps midnight works overnight, so it takes the
+        # shift-back attribution; a daytime crew takes the plain calendar day.
+        win = cfg.get("shift_window")
+        if win:
+            overnight = win["from"] > win["to"]
+            hsel = hsel_shift if overnight else hsel_plain
+        else:
+            hsel = hsel_plain if cfg.get("facility") else hsel_shift
+        if win:
+            lo, hi = win["from"], win["to"]
+            inwin = ((hsel["punch_hour"] >= lo) | (hsel["punch_hour"] < hi))                 if overnight else                 ((hsel["punch_hour"] >= lo) & (hsel["punch_hour"] < hi))
+            hsel = hsel[inwin & (hsel["punch_hour"] >= 0)]
         gates = labor_gates.get(st_name, {})
 
         def gated_out(dist, dnum):
