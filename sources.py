@@ -25,6 +25,10 @@ SOURCE_FILES = [
     "Power Flows/Debriefs/JSX Debriefs.xlsx",
     "Power BI Data Sources/Location Management.csv",
     "Pulse Sheets/Service Budgets.xlsx",
+    # Early terminations (core repo's roster job): people termed via the
+    # Termination Form whom Paylocity still shows Active — salaried
+    # imputation stops at their form date (Sam, 2026-08-27).
+    "Definitive Lists/Early Terminations.csv",
 ]
 
 # Basenames as they land in the flat CI sources/ directory.

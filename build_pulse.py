@@ -20,13 +20,15 @@ import pandas as pd
 HERE = Path(__file__).parent
 if os.environ.get("PULSE_DATA_DIR"):
     # CI mode: fetch_sources.py has downloaded everything into one flat dir
-    DEBRIEFS = PAYLOCITY = LOCMGMT_DIR = BUDGETS_DIR = Path(os.environ["PULSE_DATA_DIR"])
+    DEBRIEFS = PAYLOCITY = LOCMGMT_DIR = BUDGETS_DIR = DEFINITIVE_DIR = \
+        Path(os.environ["PULSE_DATA_DIR"])
 else:
     DH = Path(r"C:\Users\samko\Foxtrot Aviation Services\Data Hub - Documents")
     DEBRIEFS = DH / "Power Flows" / "Debriefs"
     PAYLOCITY = DH / "Paylocity Reports"
     LOCMGMT_DIR = DH / "Power BI Data Sources"
     BUDGETS_DIR = DH / "Pulse Sheets"
+    DEFINITIVE_DIR = DH / "Definitive Lists"
 WINDOW_START = date(2026, 5, 1)  # same cutoff the workbook queries hardcode
 EXCLUDED_TITLES = {"Director", "Regional Director", "Regional Manager II"}
 TODAY = date.today()
@@ -364,15 +366,51 @@ def load_managers(station_names):
             for st in station_names}
 
 
+def _norm_eid(s):
+    s = str(s or "").strip()
+    if s[:1] in ("A", "a"):
+        s = s[1:]
+    return s.lstrip("0") or ("0" if s else "")
+
+
+def load_early_terms():
+    """Employee id -> Termination Form date. The form beats Paylocity, which
+    keeps leavers 'Active' until the pay cycle closes — without this cap a
+    salaried leaver keeps imputing hours for days after they're gone."""
+    path = DEFINITIVE_DIR / "Early Terminations.csv"
+    out = {}
+    if not path.exists():
+        return out
+    for _, r in pd.read_csv(path, dtype=str).iterrows():
+        try:
+            out[_norm_eid(r["Employee Id"])] = datetime.strptime(
+                (r["Form Date"] or "").strip(), "%Y-%m-%d").date()
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
 def load_employees():
     e = pd.read_csv(PAYLOCITY / "Basic Employee Info.csv", dtype=str, encoding="cp1252")
     e = e[~e["Job Title"].isin(EXCLUDED_TITLES)].copy()
     term = pd.to_datetime(e["Termination Date"], errors="coerce")
     active = e["Employee Status Description"].str.strip() == "Active"
-    e["last_day"] = [
-        TODAY if a else (t.date() if pd.notna(t) else None)
-        for a, t in zip(active, term)
-    ]
+    early = load_early_terms()
+    last_days, capped = [], 0
+    for a, t, i in zip(active, term, e["Employee Id"]):
+        if a:
+            form = early.get(_norm_eid(i))
+            if form is not None:
+                last_days.append(min(TODAY, form))
+                capped += 1
+            else:
+                last_days.append(TODAY)
+        else:
+            last_days.append(t.date() if pd.notna(t) else None)
+    e["last_day"] = last_days
+    if capped:
+        print(f"early terminations: capped last_day for {capped} "
+              f"form-termed people Paylocity still shows Active")
     e["labor_dist"] = e["Labor Dist Description"].fillna("").str.strip()
     e["pay_type"] = e["Pay Type Code"].fillna("").str.strip()
     e["id"] = e["Employee Id"].str.strip()
@@ -841,7 +879,8 @@ def check_sources_present():
     Guards against the fetch list and the build drifting apart."""
     from sources import SOURCE_NAMES
     roots = {"This Years Hours.csv": PAYLOCITY, "Basic Employee Info.csv": PAYLOCITY,
-             "Location Management.csv": LOCMGMT_DIR, "Service Budgets.xlsx": BUDGETS_DIR}
+             "Location Management.csv": LOCMGMT_DIR, "Service Budgets.xlsx": BUDGETS_DIR,
+             "Early Terminations.csv": DEFINITIVE_DIR}
     missing = [n for n in SOURCE_NAMES if not (roots.get(n, DEBRIEFS) / n).exists()]
     if missing:
         raise SystemExit(
