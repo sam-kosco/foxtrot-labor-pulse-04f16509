@@ -37,6 +37,31 @@ The page is intentionally uneditable: ops get a link, not the workbook. The repo
 - Data window starts 2026-05-01 (`WINDOW_START`), mirroring the hardcoded cutoff in the workbook's M queries.
 - **Master page** ("All Locations — Overview", the default landing view): company-wide MTD KPIs, a per-station table, and By Regional Manager groups. Manager mapping comes from `Power BI Data Sources/Location Management.csv`, matched **blindly on the first 3 letters** of the location on both sides (the airport code) — per the owner's instruction. A location with multiple managers in the CSV appears under each of them, so manager totals overlap and do not sum to the company total.
 
+## Private/MRO hours feed (mro_hours.json)
+
+`build_mro_hours.py` (runs in the same refresh, after `build_pulse.py`) publishes
+`mro_hours.json` beside `pulse_data.json`: per-day worked hours for each Private/MRO
+pulse location, consumed by the Foxtrot Platform's Private/MRO Labor calendar (see
+`MRO_PULSE_PLAN.md` in the foxtrot-platform repo).
+
+- Locations come from `Pulse Sheets/Private and MRO Pulse Locations.xlsx` — one sheet
+  per location; columns A/B are a key/value block read until the first blank key. This
+  build uses `Labor Distribution` (comma-split for multi-dist) and the optional
+  `Attribution` knob; the price matrix from column E is the platform's concern.
+- Worked hours call the **same `worked_hours()` the commercial build uses**
+  (extracted from `build_month` 2026-08-31; the calculation contract — paid-duration
+  punches, holiday/PTO exclusion, dist repair, open-shift estimation, 40/7 salaried
+  imputation — lives in that one function). One deliberate difference: **day
+  attribution defaults to the plain calendar day** (owner decision 2026-08-31 — MRO
+  crews work day shifts; no 12 h shift-back). A sheet can opt back in with an
+  `Attribution` row valued `shift`. No launch gating — MRO locations have no debriefs.
+- **A labor dist may feed exactly one pulse**: the build hard-fails if an MRO sheet
+  claims a dist the commercial config already counts (`BUR PRIV`/`DAL PRIV` are the
+  live hazard — both belong to commercial stations today). In the workflow this build
+  is `continue-on-error` so an MRO failure can't stale the commercial page; a final
+  step still turns the run red.
+- Window: last 70 days through today.
+
 ## Adding a source
 
 `sources.py` is the **single list** of Data Hub files, shared by `fetch_sources.py`

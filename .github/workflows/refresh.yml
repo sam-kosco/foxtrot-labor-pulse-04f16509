@@ -79,6 +79,17 @@ jobs:
           TZ: America/New_York
         run: python build_pulse.py
 
+      - name: Build Private/MRO hours feed
+        # continue-on-error so a bad MRO workbook sheet (missing dist, dist
+        # claimed by both pulses) can't leave ops on a stale COMMERCIAL page;
+        # the last step still turns the run red so the failure stays loud.
+        id: mro
+        continue-on-error: true
+        env:
+          PULSE_DATA_DIR: sources
+          TZ: America/New_York
+        run: python build_mro_hours.py
+
       - name: Commit and push
         run: |
           git config user.name  "github-actions[bot]"
@@ -86,7 +97,8 @@ jobs:
           # sources_meta.json is the poll baseline: committing the stamps of
           # THIS build is what lets the next check say "nothing changed".
           cp sources/sources_meta.json sources_meta.json
-          git add index.html pulse_data.json sources_meta.json
+          # mro_hours.json is unchanged (stale, harmless) if its build failed
+          git add index.html pulse_data.json sources_meta.json mro_hours.json
           git diff --cached --quiet || git commit -m "chore: refresh pulse [$(date -u '+%Y-%m-%d %H:%M UTC')]"
           git push
 
@@ -129,4 +141,10 @@ jobs:
           gh api "repos/${GITHUB_REPOSITORY}/pages/builds/latest" \
             --jq '{status, error: .error.message}' || true
           echo "::error::Pages never served ${EXPECT} after 20 min (site still on ${LIVE:-unknown})"
+          exit 1
+
+      - name: Fail if the MRO feed build failed
+        if: steps.mro.outcome == 'failure'
+        run: |
+          echo "::error::build_mro_hours.py failed — the commercial pulse refreshed fine, but mro_hours.json is stale. Check the 'Build Private/MRO hours feed' step log (bad workbook sheet? dist claimed by both pulses?)."
           exit 1

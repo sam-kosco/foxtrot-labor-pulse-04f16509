@@ -25,6 +25,10 @@ SOURCE_FILES = [
     "Power Flows/Debriefs/JSX Debriefs.xlsx",
     "Power BI Data Sources/Location Management.csv",
     "Pulse Sheets/Service Budgets.xlsx",
+    # Private/MRO pulse locations (one sheet per location; the platform's
+    # Private/MRO Labor calendar reads config from it, this repo reads each
+    # sheet's Labor Distribution to publish mro_hours.json).
+    "Pulse Sheets/Private and MRO Pulse Locations.xlsx",
     # Early terminations (core repo's roster job): people termed via the
     # Termination Form whom Paylocity still shows Active — salaried
     # imputation stops at their form date (Sam, 2026-08-27).

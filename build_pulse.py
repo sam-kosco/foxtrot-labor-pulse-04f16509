@@ -669,6 +669,99 @@ def labor_gate_dates(stations, tables):
     return out
 
 
+# Sentinel distinguishing "station has no launch gate" from "gated with no
+# debriefs yet" (a None date suppresses ALL labor).
+_NO_LAUNCH_GATE = object()
+
+
+def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
+                 gates=None, launch=_NO_LAUNCH_GATE):
+    """Per-day worked hours for one station config in one month: hourly
+    punches + open-shift estimates + 40/7 per active salaried head, with
+    optional per-dist gates and a station-wide launch gate.
+
+    This is the single calculation contract for worked hours — shared by the
+    commercial build (build_month) and build_mro_hours.py. Change it here and
+    both pulses move together.
+
+    cfg keys used: labor_keys, salary_keys (explicit [] = no salaried
+    imputation), facility (True = plain calendar-day attribution),
+    shift_window. Returns (hourly, est, est_n, sal_counts, worked), lists
+    indexed by day-1.
+    """
+    days = list(range(1, ndays + 1))
+    gates = gates or {}
+    keys = [k.upper() for k in (cfg.get("labor_keys") or [cfg["labor_key"]]) if k]
+    if isinstance(cfg.get("salary_keys"), list):
+        # an explicit [] means this crew carries no salaried imputation
+        skeys = [k.upper() for k in cfg["salary_keys"] if k]
+    else:
+        skeys = keys
+    hourly = [0.0] * ndays
+    est = [0.0] * ndays
+    est_n = [0] * ndays
+    # A crew whose window wraps midnight works overnight, so it takes the
+    # shift-back attribution; a daytime crew takes the plain calendar day.
+    win = cfg.get("shift_window")
+    if win:
+        overnight = win["from"] > win["to"]
+        hsel = hsel_shift if overnight else hsel_plain
+    else:
+        hsel = hsel_plain if cfg.get("facility") else hsel_shift
+    if win:
+        lo, hi = win["from"], win["to"]
+        inwin = ((hsel["punch_hour"] >= lo) | (hsel["punch_hour"] < hi)) \
+            if overnight else \
+            ((hsel["punch_hour"] >= lo) & (hsel["punch_hour"] < hi))
+        hsel = hsel[inwin & (hsel["punch_hour"] >= 0)]
+
+    def gated_out(dist, dnum):
+        g = gates.get(dist)
+        return dist in gates and (g is None or date(year, month, dnum) < g)
+
+    hourly_pool = hsel[hsel["pay_type"] == "Hourly"]
+    for key in keys:
+        sub = hourly_pool[hourly_pool["labor_dist"].str.upper() == key]
+        if sub.empty:
+            continue
+        for d, v in sub.groupby("day")["hours"].sum().items():
+            if 1 <= d <= ndays and not gated_out(key, d):
+                hourly[d - 1] += float(v)
+        openrows = sub[sub["est"] > 0]
+        for d, v in openrows.groupby("day")["est"].sum().items():
+            if 1 <= d <= ndays and not gated_out(key, d):
+                est[d - 1] = round(est[d - 1] + float(v), 2)
+        for d, n in openrows.groupby("day").size().items():
+            if 1 <= d <= ndays and not gated_out(key, d):
+                est_n[d - 1] += int(n)
+
+    sal_counts = [0] * ndays
+    for skey in skeys:
+        sal_emp = emp[(emp["pay_type"] == "Salary")
+                      & (emp["labor_dist"].str.upper() == skey)]
+        if sal_emp.empty:
+            continue
+        for i, dnum in enumerate(days):
+            if gated_out(skey, dnum):
+                continue
+            cut = date(year, month, dnum)
+            sal_counts[i] += sum(1 for ld in sal_emp["last_day"]
+                                 if ld and ld > cut)
+    # Pre-launch labor (before this station's first debrief) is
+    # implementation/training — zero it out rather than score it.
+    if launch is not _NO_LAUNCH_GATE:
+        for i, dnum in enumerate(days):
+            if launch is None or date(year, month, dnum) < launch:
+                hourly[i] = 0.0
+                est[i] = 0.0
+                est_n[i] = 0
+                sal_counts[i] = 0
+
+    worked = [round(h + e + n * 40 / 7, 2)
+              for h, e, n in zip(hourly, est, sal_counts)]
+    return hourly, est, est_n, sal_counts, worked
+
+
 def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start,
                 labor_gates):
     ndays = month_days(year, month)
@@ -746,78 +839,12 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start
                              "aircraft": svc.get("aircraft", False),
                              "est_days": svc_est_days})
 
-        # worked hours: hourly punches + salaried imputation, per day
-        keys = [k.upper() for k in (cfg.get("labor_keys") or [cfg["labor_key"]]) if k]
-        if isinstance(cfg.get("salary_keys"), list):
-            # an explicit [] means this crew carries no salaried imputation
-            skeys = [k.upper() for k in cfg["salary_keys"] if k]
-        else:
-            skeys = keys
-        hourly = [0.0] * ndays
-        est = [0.0] * ndays
-        est_n = [0] * ndays
-        # A crew whose window wraps midnight works overnight, so it takes the
-        # shift-back attribution; a daytime crew takes the plain calendar day.
-        win = cfg.get("shift_window")
-        if win:
-            overnight = win["from"] > win["to"]
-            hsel = hsel_shift if overnight else hsel_plain
-        else:
-            hsel = hsel_plain if cfg.get("facility") else hsel_shift
-        if win:
-            lo, hi = win["from"], win["to"]
-            inwin = ((hsel["punch_hour"] >= lo) | (hsel["punch_hour"] < hi))                 if overnight else                 ((hsel["punch_hour"] >= lo) & (hsel["punch_hour"] < hi))
-            hsel = hsel[inwin & (hsel["punch_hour"] >= 0)]
-        gates = labor_gates.get(st_name, {})
-
-        def gated_out(dist, dnum):
-            g = gates.get(dist)
-            return dist in gates and (g is None or date(year, month, dnum) < g)
-
-        hourly_pool = hsel[hsel["pay_type"] == "Hourly"]
-        for key in keys:
-            sub = hourly_pool[hourly_pool["labor_dist"].str.upper() == key]
-            if sub.empty:
-                continue
-            for d, v in sub.groupby("day")["hours"].sum().items():
-                if 1 <= d <= ndays and not gated_out(key, d):
-                    hourly[d - 1] += float(v)
-            openrows = sub[sub["est"] > 0]
-            for d, v in openrows.groupby("day")["est"].sum().items():
-                if 1 <= d <= ndays and not gated_out(key, d):
-                    est[d - 1] = round(est[d - 1] + float(v), 2)
-            for d, n in openrows.groupby("day").size().items():
-                if 1 <= d <= ndays and not gated_out(key, d):
-                    est_n[d - 1] += int(n)
-
-        sal_counts = [0] * ndays
-        for skey in skeys:
-            sal_emp = emp[(emp["pay_type"] == "Salary")
-                          & (emp["labor_dist"].str.upper() == skey)]
-            if sal_emp.empty:
-                continue
-            for i, dnum in enumerate(days):
-                if gated_out(skey, dnum):
-                    continue
-                cut = date(year, month, dnum)
-                sal_counts[i] += sum(1 for ld in sal_emp["last_day"]
-                                     if ld and ld > cut)
-        # Pre-launch labor (before this station's first debrief) is
-        # implementation/training — zero it out rather than score it.
-        pre_launch = []
-        if st_name in hours_start:
-            start = hours_start[st_name]
-            for i, dnum in enumerate(days):
-                if start is None or date(year, month, dnum) < start:
-                    if hourly[i] or est[i] or sal_counts[i]:
-                        pre_launch.append(dnum)
-                    hourly[i] = 0.0
-                    est[i] = 0.0
-                    est_n[i] = 0
-                    sal_counts[i] = 0
-
-        worked = [round(h + e + n * 40 / 7, 2)
-                  for h, e, n in zip(hourly, est, sal_counts)]
+        # worked hours: hourly punches + salaried imputation, per day —
+        # the shared contract in worked_hours()
+        hourly, est, est_n, sal_counts, worked = worked_hours(
+            cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
+            gates=labor_gates.get(st_name, {}),
+            launch=hours_start.get(st_name, _NO_LAUNCH_GATE))
 
         # weekly blocks + stats (avg over elapsed days only)
         weeks = []
@@ -880,6 +907,7 @@ def check_sources_present():
     from sources import SOURCE_NAMES
     roots = {"This Years Hours.csv": PAYLOCITY, "Basic Employee Info.csv": PAYLOCITY,
              "Location Management.csv": LOCMGMT_DIR, "Service Budgets.xlsx": BUDGETS_DIR,
+             "Private and MRO Pulse Locations.xlsx": BUDGETS_DIR,
              "Early Terminations.csv": DEFINITIVE_DIR}
     missing = [n for n in SOURCE_NAMES if not (roots.get(n, DEBRIEFS) / n).exists()]
     if missing:
