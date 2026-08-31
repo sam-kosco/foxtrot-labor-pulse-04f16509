@@ -9,13 +9,17 @@ name: Daily Pulse Refresh
 # (The workflow name is load-bearing: mirror.yml's workflow_run matches it.)
 
 on:
-  schedule:
-    # 10:00-22:30 UTC ≈ 6 AM-6:30 PM Eastern across DST. Before 10:00 UTC
-    # nothing upstream changes; overnight edits catch the first morning poll.
-    - cron: "*/30 10-22 * * *"
+  # No native cron (Sam, 2026-08-31 — GitHub's scheduler is fully retired
+  # org-wide): the platform's dispatcher POLLS this every 30 min, 6:00 AM to
+  # 6:30 PM Eastern, from Monitoring/schedules.json. A dispatched poll
+  # honors the change check exactly as the old cron did; tick `force` (the
+  # Actions-tab default for humans in a hurry) to rebuild unconditionally.
   workflow_dispatch:
-    # Always available for manual refresh from the Actions tab (skips the
-    # change check and rebuilds unconditionally)
+    inputs:
+      force:
+        description: "Rebuild even if no source changed"
+        type: boolean
+        default: false
 
 concurrency:
   group: pulse-refresh
@@ -38,8 +42,8 @@ jobs:
           CLIENT_ID:     ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "manual dispatch — building unconditionally"
+          if [ "${{ inputs.force }}" = "true" ]; then
+            echo "forced — building unconditionally"
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
