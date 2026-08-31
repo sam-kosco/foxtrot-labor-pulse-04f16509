@@ -31,6 +31,15 @@ SHEETS = ["TUS MHI", "SLN 1V"]
 def main():
     hdrs = {"Authorization": f"Bearer {get_token()}",
             "Content-Type": "application/json"}
+    # control probe: the workbook API on a file this app edits in production
+    ctrl = (f"https://graph.microsoft.com/v1.0/drives/{DRIVE_ID}"
+            f"/root:/ERP/Work%20Scopes.xlsx:/workbook/worksheets?$select=name")
+    r = requests.get(ctrl, headers=hdrs, timeout=60)
+    print("CONTROL Work Scopes worksheets:", r.status_code,
+          r.text[:300] if not r.ok else "ok")
+    r = requests.get(f"{BASE}/worksheets?$select=name", headers=hdrs, timeout=60)
+    print("MRO workbook worksheets:", r.status_code,
+          r.text[:300] if not r.ok else r.text[:200])
     for sheet in SHEETS:
         s = requests.utils.quote(sheet)
         for addr, values in PATCHES:
