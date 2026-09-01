@@ -26,9 +26,10 @@ import openpyxl
 import build_pulse as bp
 
 MRO_WORKBOOK = "Private and MRO Pulse Locations.xlsx"
-# The platform calendar shows 2 weeks back; publish 10 weeks so history is
-# there when someone scrolls a schedule conversation backward.
-LOOKBACK_DAYS = 70
+# The platform calendar defaults to 2 weeks back but can navigate ~3 months
+# back (Sam, 2026-08-31); publish 15 weeks so the back view shows worked
+# hours instead of dashes (WINDOW_START still caps the far end).
+LOOKBACK_DAYS = 105
 
 
 def load_mro_workbook():
