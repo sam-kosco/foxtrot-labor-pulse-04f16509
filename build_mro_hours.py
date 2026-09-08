@@ -11,7 +11,7 @@ budget config are the platform's concern.
 
 Worked hours use the exact contract the commercial pulse uses
 (build_pulse.worked_hours: paid-duration punches, holiday/PTO exclusion,
-"Not Defined" dist repair, open-shift estimation, 40/7 per active salaried
+"Not Defined" dist repair, 40/7 per active salaried
 head), with one deliberate difference: day attribution defaults to the plain
 calendar day the punch falls on (Sam, 2026-08-31: "assign work to the day it
 is logged on Paylocity" — MRO crews work day shifts, no 12 h shift-back).
@@ -112,7 +112,7 @@ def main():
                               or "plain").strip().lower()
             cfg = {"labor_keys": mc["dists"],
                    "facility": attribution != "shift"}
-            hourly, est, est_n, sal, worked = bp.worked_hours(
+            hourly, inc_n, sal, worked = bp.worked_hours(
                 cfg, hsel_shift, hsel_plain, emp, y, m, ndays)
             for i in range(ndays):
                 d = bp.date(y, m, i + 1)
@@ -120,8 +120,10 @@ def main():
                     series[loc][d.isoformat()] = {
                         "worked": worked[i],
                         "hourly": round(hourly[i], 2),
-                        "est": est[i],
-                        "est_n": est_n[i],
+                        # No estimates since 2026-09-08: an open punch
+                        # contributes nothing and is only counted here so the
+                        # consumer can flag the day.
+                        "incomplete_n": inc_n[i],
                         "salary_heads": sal[i],
                     }
         m += 1
