@@ -97,6 +97,7 @@ def load_gojet():
     return pd.DataFrame({
         "date": t["Date"].map(to_date),
         "Location": t["Location"].astype(str).str.strip(),
+        "Tail": t["Tail Number"],
         "IHC": t["Interior Heavy Clean (IHC)"].map(not_no),
         "RON": t["RON Clean (RON)"].map(not_no),
         "CE": t["Carpet Extraction (CE)"].map(not_no),
@@ -110,7 +111,8 @@ def load_gojet():
 
 def load_mesa():
     t = read_table(DEBRIEFS / "Mesa Debriefs.xlsx", "Input")
-    out = pd.DataFrame({"date": t["Date"].map(to_date)})
+    out = pd.DataFrame({"date": t["Date"].map(to_date),
+                        "Tail": t["Tail Number"]})
     for flag, col in [
         ("IHC", "Interior Heavy Clean (IHC)"), ("RON", "RON Clean (RON)"),
         ("EC", "Exterior Clean (EC)"), ("ED", "Exterior Detail (ED)"),
@@ -130,6 +132,7 @@ def load_psa():
     return pd.DataFrame({
         "date": t["Date"].map(to_date),
         "Location": t["Location"].astype(str).str.strip().str[:3],
+        "Tail": t["Tail Number"],
         "RON": (combined != "No" * 7).astype(int),
         "IC": t["Interior Clean (I)"].map(yes),
         "EC": t["Exterior Clean (E)"].map(yes),
@@ -149,6 +152,7 @@ def load_breeze():
     return pd.DataFrame({
         "date": t["Date"].map(to_date),
         "Location": t["Location"].astype(str).str.strip(),
+        "Tail": t["Tail"],
         "Breeze RON": pd.to_numeric(t["Breeze RON"], errors="coerce").fillna(0).astype(int),
         "Breeze Ultra": pd.to_numeric(t["Breeze Ultra"], errors="coerce").fillna(0).astype(int),
     })
@@ -159,6 +163,7 @@ def load_ultra():
     out = pd.DataFrame({
         "date": t["Date"].map(to_date),
         "Location": t["Location"].astype(str).str.strip(),
+        "Tail": t["Tail"],
         # One table holds two job types — "Ultra Cleaning" and "Shroud
         # Cleaning". Station specs filter on this so shroud jobs aren't
         # counted as Ultras (the workbook's COUNTIFS filtered Location only).
@@ -183,6 +188,7 @@ def load_aa():
     out = pd.DataFrame({
         "date": pd.to_datetime(t["Job Date"], errors="coerce").dt.date,
         "Station": t["Station"].astype(str).str.strip(),
+        "Tail": "",
         "Service": svc,
     })
     return out[out["Service"].notna()]
@@ -223,6 +229,7 @@ def load_jsx():
     out = pd.DataFrame({
         "date": t["Date"].map(to_date),
         "Location": t["Service Location"].astype(str).str.strip().str.upper(),
+        "Tail": t["Tail Number"],
         "Plane Type": t["Plane Type"].astype(str).str.strip(),
     })
     for col in JSX_SERVICES:
@@ -256,8 +263,106 @@ def load_frontier():
     return pd.DataFrame({
         "date": t["Date"].map(to_date),
         "Location": t["Location"].astype(str).str.strip(),
+        "Tail": t["Tail Number"],
         "Aircraft Type and Service": t["Aircraft Type and Service"],
     })
+
+
+# ------------------------------------------------------- closeout compare
+
+# Closeout Compare reconciles each night's closeout against the debriefs. The
+# pulse acts on exactly two discrepancy types (Sam, 2026-09-08); everything
+# else in that sheet (service mismatches, typos, missing-from-closeout) is a
+# paperwork matter that does not change a debrief count.
+CLOSEOUT_DOUBLE = "double debrief"          # counted twice -> corrected here
+CLOSEOUT_MISSING = "missing from debrief"   # never submitted -> NOT invented
+# Program -> the debrief table the pulse counts it from, so a discrepancy is
+# only pinned on stations that actually read that program.
+CLOSEOUT_PROGRAM_TABLE = {
+    "envoy": "Envoy_Debriefs", "dfw": "Envoy_Debriefs",
+    "regional": "Envoy_Debriefs", "psa": "PSA_Debriefs",
+    "gojet": "GoJet_Debriefs", "mesa": "Mesa_Debriefs",
+    "ultra": "Ultra_Debriefs", "breeze": "Breeze_Debriefs",
+    "jsx": "JSX_Debriefs", "frontier": "Frontier_Debriefs",
+}
+
+
+def _closeout_kind(text):
+    """Canonical label only. The sheet also carries free-text descriptions of
+    the same situations ("Double debrief flagged", "Missing in debrief (on
+    closeout...)"); those are left alone rather than parsed, because a wrong
+    match here would silently change a station's counts."""
+    t = re.sub(r"\s+", " ", str(text or "")).strip().lower()
+    if t == CLOSEOUT_DOUBLE:
+        return "double"
+    if t == CLOSEOUT_MISSING:
+        return "missing"
+    return None
+
+
+def load_closeout():
+    """Open Missing-from-Debrief / Double-Debrief rows, by (station, date).
+
+    A row whose Status is Closed (any case) is settled: the debrief is then
+    authoritative, so it neither corrects a count nor raises an asterisk."""
+    path = DEBRIEFS / "Closeout Compare.xlsx"
+    t = pd.read_excel(path, sheet_name="Sheet1")
+    t.columns = [str(c).strip() for c in t.columns]
+    rows, closed_n, other = [], 0, 0
+    for _, r in t.iterrows():
+        kind = _closeout_kind(r.get("Discrepancy"))
+        if kind is None:
+            other += 1
+            continue
+        if str(r.get("Status") or "").strip().lower() == "closed":
+            closed_n += 1
+            continue
+        d = to_date(r.get("Date"))
+        if d is None:
+            continue
+        rows.append({
+            "date": d,
+            "loc": str(r.get("Location") or "").strip().upper()[:3],
+            "tail": str(r.get("Tail") or "").strip().upper(),
+            "program": str(r.get("Program") or "").strip().lower(),
+            "table": CLOSEOUT_PROGRAM_TABLE.get(
+                str(r.get("Program") or "").strip().lower()),
+            "kind": kind,
+        })
+    out = pd.DataFrame(rows, columns=["date", "loc", "tail", "program",
+                                      "table", "kind"])
+    n_d = int((out["kind"] == "double").sum()) if len(out) else 0
+    n_m = int((out["kind"] == "missing").sum()) if len(out) else 0
+    print(f"  Closeout Compare: {n_d} open double, {n_m} open missing "
+          f"({closed_n} closed, {other} other discrepancy types ignored)")
+    return out
+
+
+def apply_double_debriefs(tables, closeout):
+    """Drop the duplicate row an open Double Debrief refers to.
+
+    Only ever removes one row per flagged job, and only when the table really
+    does hold two or more matching rows — if someone has already deleted the
+    duplicate, correcting again would under-count."""
+    if closeout.empty:
+        return 0
+    fixed = 0
+    for _, r in closeout[closeout["kind"] == "double"].iterrows():
+        tname = r["table"]
+        t = tables.get(tname)
+        if t is None or not r["tail"]:
+            continue
+        m = (t["date"] == r["date"]) &             (t["Tail"].astype(str).str.strip().str.upper() == r["tail"])
+        loc_col = "Station" if "Station" in t.columns else (
+            "Location" if "Location" in t.columns else None)
+        if loc_col and r["loc"]:
+            m &= t[loc_col].astype(str).str.strip().str.upper().str[:3] == r["loc"]
+        idx = list(t.index[m])
+        if len(idx) >= 2:
+            tables[tname] = t.drop(index=idx[-1])
+            fixed += 1
+    print(f"  double debriefs corrected (one duplicate row dropped each): {fixed}")
+    return fixed
 
 
 # ---------------------------------------------------------------- paylocity
@@ -472,30 +577,20 @@ def load_hours(emp):
     # already station-local in the Paylocity export. -1 = no punch-in.
     h["punch_hour"] = [int(p.hour) if pd.notna(p) else -1 for p in punch]
 
-    # Shifts still in progress (punch-in, no punch-out, 0 paid hours) at the
-    # moment the CSV was generated: estimate the day's hours from history —
-    # employee's median closed-shift duration, else location median, else 8 h,
-    # capped at 16. Only shifts that STARTED in the 18 h before the file was
-    # generated qualify (excludes future/scheduled placeholder punches and
-    # long-forgotten open punches). Corrected by real hours at next refresh.
+    # Shifts still in progress when the CSV was generated (punch-in, no
+    # punch-out, 0 paid hours). The pulse no longer estimates them (Sam,
+    # 2026-09-08): they carry 0 paid hours so they contribute nothing, and
+    # the day is marked with an asterisk saying how many are outstanding.
+    # Only punches from the 18 h before the file was generated count as "in
+    # progress" - older opens are abandoned punches rather than tonight's
+    # crew, and future-dated placeholder rows are not shifts at all.
     updated = hours_file_updated()
     age_h = (updated - punch).dt.total_seconds() / 3600
-    open_shift = punch.notna() & ~punched_out & (h["hours"] == 0) \
-        & (age_h >= 0) & (age_h <= 18)
-    closed = h[punched_out & (h["hours"] > 0)]
-    emp_med = closed.groupby(closed["Employee Id"].str.strip())["hours"].median()
-    dist_med = closed.groupby(closed["Labor Dist Name"].fillna("").str.strip().str.upper())["hours"].median()
-    def estimate(row):
-        e = emp_med.get(str(row["Employee Id"]).strip())
-        if pd.isna(e) or e is None:
-            e = dist_med.get(str(row["Labor Dist Name"] or "").strip().upper())
-        if pd.isna(e) or e is None:
-            e = 8.0
-        return min(float(e), 16.0)
-    h["est"] = 0.0
-    h.loc[open_shift, "est"] = h[open_shift].apply(estimate, axis=1)
-    print(f"  open shifts estimated: {int(open_shift.sum())} "
-          f"(~{h['est'].sum():.0f} h; file updated {updated:%b %d %I:%M %p})")
+    h["incomplete"] = (punch.notna() & ~punched_out & (h["hours"] == 0)
+                       & (age_h >= 0) & (age_h <= 18)).astype(int)
+    print(f"  incomplete punches (excluded, flagged on the page): "
+          f"{int(h['incomplete'].sum())} "
+          f"(hours file generated {updated:%b %d %I:%M %p})")
     id2dist = dict(zip(emp["id"], emp["labor_dist"]))
     id2pay = dict(zip(emp["id"], emp["pay_type"]))
     eid = h["Employee Id"].str.strip()
@@ -559,34 +654,24 @@ def dow_daily_rates(svc):
             for n in DOW_NAMES]
 
 
-def aa_fill_plan(aa_full):
-    """AA's feed doesn't update automatically (runs through AA's internal
-    system), so past dates can be entirely absent. For each station, any past
-    date with no AA rows gets the 7-day per-service average taken from the 7
-    days ending at the most recent listed date before it (owner decision,
-    Aug 2026). Returns {station: {date: {service: avg}}}."""
-    plans = {}
+def aa_missing_days(aa_full, year, month, upto_day):
+    """Elapsed days on which a station has no AA rows at all.
+
+    AA's feed runs through AA's internal system and does not update on its own,
+    so whole days go absent. The pulse used to fill those with a 7-day average;
+    it no longer invents data (Sam, 2026-09-08) — the day simply counts what
+    arrived, and the page marks it so nobody reads a gap as a slow night.
+    Returns {station code: {day numbers}}."""
+    out = {}
+    if aa_full is None or aa_full.empty:
+        return out
     for stn, grp in aa_full.groupby("Station"):
-        dates = {d for d in grp["date"] if d is not None}
-        if not dates:
-            continue
-        fills = {}
-        d = max(min(dates), WINDOW_START)
-        while d < TODAY:
-            if d not in dates:
-                prior = [x for x in dates if x < d]
-                if prior:
-                    ref = max(prior)
-                    win = {ref - timedelta(days=i) for i in range(7)}
-                    sel = grp[grp["date"].isin(win)]
-                    fills[d] = {svc: round(float(n) / 7, 2)
-                                for svc, n in sel.groupby("Service").size().items()}
-            d += timedelta(days=1)
-        if fills:
-            plans[stn] = fills
-            print(f"  AA gap-fill {stn}: {len(fills)} missing day(s) "
-                  f"filled with 7-day averages")
-    return plans
+        have = {d.day for d in grp["date"]
+                if d is not None and d.year == year and d.month == month}
+        missing = {d for d in range(1, upto_day + 1) if d not in have}
+        if missing:
+            out[str(stn).strip().upper()[:3]] = missing
+    return out
 
 
 def first_debrief_dates(stations, tables):
@@ -686,8 +771,10 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
 
     cfg keys used: labor_keys, salary_keys (explicit [] = no salaried
     imputation), facility (True = plain calendar-day attribution),
-    shift_window. Returns (hourly, est, est_n, sal_counts, worked), lists
-    indexed by day-1.
+    shift_window. Returns (hourly, inc_n, sal_counts, worked), lists indexed
+    by day-1. inc_n counts punches still open when the hours file was cut:
+    they contribute no hours (the pulse does not estimate) and only drive the
+    asterisk on the page.
     """
     days = list(range(1, ndays + 1))
     gates = gates or {}
@@ -698,8 +785,7 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
     else:
         skeys = keys
     hourly = [0.0] * ndays
-    est = [0.0] * ndays
-    est_n = [0] * ndays
+    inc_n = [0] * ndays
     # A crew whose window wraps midnight works overnight, so it takes the
     # shift-back attribution; a daytime crew takes the plain calendar day.
     win = cfg.get("shift_window")
@@ -727,13 +813,10 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
         for d, v in sub.groupby("day")["hours"].sum().items():
             if 1 <= d <= ndays and not gated_out(key, d):
                 hourly[d - 1] += float(v)
-        openrows = sub[sub["est"] > 0]
-        for d, v in openrows.groupby("day")["est"].sum().items():
-            if 1 <= d <= ndays and not gated_out(key, d):
-                est[d - 1] = round(est[d - 1] + float(v), 2)
+        openrows = sub[sub["incomplete"] == 1]
         for d, n in openrows.groupby("day").size().items():
             if 1 <= d <= ndays and not gated_out(key, d):
-                est_n[d - 1] += int(n)
+                inc_n[d - 1] += int(n)
 
     sal_counts = [0] * ndays
     for skey in skeys:
@@ -753,16 +836,14 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
         for i, dnum in enumerate(days):
             if launch is None or date(year, month, dnum) < launch:
                 hourly[i] = 0.0
-                est[i] = 0.0
-                est_n[i] = 0
+                inc_n[i] = 0
                 sal_counts[i] = 0
 
-    worked = [round(h + e + n * 40 / 7, 2)
-              for h, e, n in zip(hourly, est, sal_counts)]
-    return hourly, est, est_n, sal_counts, worked
+    worked = [round(h + n * 40 / 7, 2) for h, n in zip(hourly, sal_counts)]
+    return hourly, inc_n, sal_counts, worked
 
 
-def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start,
+def build_month(year, month, stations, tables, hours, emp, closeout, hours_start,
                 labor_gates):
     ndays = month_days(year, month)
     is_current = (year, month) == (TODAY.year, TODAY.month)
@@ -770,6 +851,16 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start
     # elapsed-day cutoff, exactly as the sheets do it: past month => all days,
     # current month => days strictly before today
     cutoff = ndays + 1 if is_past else (TODAY.day if is_current else 0)
+
+    # Days the AA feed simply has not delivered, and the open Closeout
+    # Compare rows landing in this month — both drive asterisks, neither
+    # invents a number.
+    last_elapsed = ndays if is_past else max(cutoff - 1, 0)
+    aa_gaps = aa_missing_days(tables.get("AA_Debriefs"), year, month,
+                              last_elapsed)
+    co_month = (closeout[closeout["date"].map(
+        lambda d: d is not None and d.year == year and d.month == month)]
+        if len(closeout) else closeout)
 
     # pre-slice each debrief table to this month
     month_tbl = {}
@@ -791,17 +882,15 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start
     for st_name, cfg in stations.items():
         days = list(range(1, ndays + 1))
         code = st_name.strip()[:3].upper()
-        st_fills = aa_plans.get(code, {})
-        aa_est_days = set()
+
         svc_rows = []
         budgeted = [0.0] * ndays
         for svc in cfg["services"]:
             vals = []
-            # AA-fed service? note its Service criterion for gap-filling
-            aa_svc = next((v for sp in svc.get("specs", [])
-                           if sp["table"] == "AA_Debriefs"
-                           for c, v in sp["criteria"] if c == "Service"), None)
-            svc_est_days = []
+            # Does this service come from the AA feed? Only those days can
+            # be blank purely because AA has not delivered.
+            uses_aa = any(sp["table"] == "AA_Debriefs"
+                          for sp in svc.get("specs", []))
             if svc["kind"] == "fixed":
                 daily = dow_daily_rates(svc)
                 for d in days:
@@ -824,12 +913,6 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start
                             total += float(t.loc[m, spec["sum_col"]].sum())
                         else:
                             total += int(m.sum())
-                    if aa_svc is not None:
-                        fill = st_fills.get(date(year, month, d))
-                        if fill is not None:
-                            total = fill.get(aa_svc, 0)
-                            svc_est_days.append(d)
-                            aa_est_days.add(d)
                     vals.append(total)
             rate = svc.get("rate") or 0
             for i, v in enumerate(vals):
@@ -837,11 +920,11 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start
             svc_rows.append({"name": svc["name"], "kind": svc["kind"],
                              "rate": rate, "days": vals,
                              "aircraft": svc.get("aircraft", False),
-                             "est_days": svc_est_days})
+                             "uses_aa": uses_aa})
 
         # worked hours: hourly punches + salaried imputation, per day —
         # the shared contract in worked_hours()
-        hourly, est, est_n, sal_counts, worked = worked_hours(
+        hourly, inc_n, sal_counts, worked = worked_hours(
             cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
             gates=labor_gates.get(st_name, {}),
             launch=hours_start.get(st_name, _NO_LAUNCH_GATE))
@@ -878,6 +961,54 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start
             weeks.append({"days": drange, "avg_aircraft": ac,
                           "avg_budgeted": ab, "avg_worked": aw, "variance": var})
 
+        # ---- asterisk notes: what the numbers on this row cannot show
+        worked_notes, budget_notes = {}, {}
+        for i, dnum in enumerate(days):
+            if inc_n[i]:
+                n = inc_n[i]
+                worked_notes[str(dnum)] = (
+                    f"{n} shift{'' if n == 1 else 's'} had not been punched "
+                    f"out when the hours file was cut, so {'its' if n == 1 else 'their'} "
+                    f"hours are not included here. The figure is the hours "
+                    f"actually recorded, and will rise once the punches close.")
+        st_aa_gaps = aa_gaps.get(code, set()) if any(
+            sr.get("uses_aa") for sr in svc_rows) else set()
+        st_tables = {sp["table"] for sv in cfg["services"]
+                     for sp in sv.get("specs", [])}
+        # {day: [missing, double]} for this station. Built with vectorized
+        # masks — indexing a frame with an empty list selects columns, not
+        # rows, which silently drops the schema.
+        co_day = {}
+        if len(co_month):
+            sel = co_month[co_month["loc"].eq(code)
+                           & (co_month["table"].isin(st_tables)
+                              | co_month["table"].isna())]
+            for _, cr in sel.iterrows():
+                slot = co_day.setdefault(cr["date"].day, [0, 0])
+                slot[0 if cr["kind"] == "missing" else 1] += 1
+        for dnum in days:
+            notes = []
+            if dnum in st_aa_gaps:
+                notes.append("AA has not delivered debriefs for this day, so "
+                             "its AA job counts are missing rather than zero.")
+            if dnum in co_day:
+                miss, dub = co_day[dnum]
+                if miss:
+                    notes.append(
+                        f"Closeout Compare has {miss} job{'' if miss == 1 else 's'} "
+                        f"on the closeout with no debrief submitted. Those are "
+                        f"NOT added here — the count shows only debriefed work, "
+                        f"so it is understated until the debrief is filed.")
+                if dub:
+                    notes.append(
+                        f"Closeout Compare found {dub} duplicate "
+                        f"debrief{'' if dub == 1 else 's'}; the extra "
+                        f"submission{'' if dub == 1 else 's'} "
+                        f"{'has' if dub == 1 else 'have'} been removed from "
+                        f"this count.")
+            if notes:
+                budget_notes[str(dnum)] = " ".join(notes)
+
         mtd_days = [d for d in days if is_past or d < cutoff]
         mtd_b = round(sum(budgeted[d - 1] for d in mtd_days), 1)
         mtd_w = round(sum(worked[d - 1] for d in mtd_days), 1)
@@ -886,9 +1017,9 @@ def build_month(year, month, stations, tables, hours, emp, aa_plans, hours_start
             "budgeted": [round(b, 2) for b in budgeted],
             "worked": worked,
             "hourly": [round(h, 2) for h in hourly],
-            "est": est,
-            "est_n": est_n,
-            "aa_est_days": sorted(aa_est_days),
+            "incomplete_n": inc_n,
+            "worked_notes": worked_notes,
+            "budget_notes": budget_notes,
             "salary_heads": sal_counts,
             "weeks": weeks,
             "mtd": {"budgeted": mtd_b, "worked": mtd_w,
@@ -945,13 +1076,14 @@ def main():
     hours = load_hours(emp)
     print(f"  employees: {len(emp)}, punch rows in window: {len(hours)}")
 
-    aa_plans = aa_fill_plan(tables["AA_Debriefs"])
+    closeout = load_closeout()
+    apply_double_debriefs(tables, closeout)
     hours_start = first_debrief_dates(stations, tables)
     labor_gates = labor_gate_dates(stations, tables)
     months = []
     y, m = WINDOW_START.year, WINDOW_START.month
     while (y, m) <= (TODAY.year, TODAY.month):
-        months.append(build_month(y, m, stations, tables, hours, emp, aa_plans,
+        months.append(build_month(y, m, stations, tables, hours, emp, closeout,
                                   hours_start, labor_gates))
         m += 1
         if m == 13:

@@ -31,7 +31,7 @@ select:focus{outline:none;border-color:var(--orange)}
 .mchip{font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;
   background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px}
 .mchip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
-.mchip:focus-visible,select:focus-visible,.wh:focus-visible{outline:2px solid var(--orange);outline-offset:1px}
+.mchip:focus-visible,select:focus-visible,.wh:focus-visible,.bn:focus-visible{outline:2px solid var(--orange);outline-offset:1px}
 .kpis{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;
   padding:14px 18px;min-width:168px;flex:0 1 auto}
@@ -57,7 +57,7 @@ select:focus{outline:none;border-color:var(--orange)}
 .future{color:var(--future)}
 .totrow .cell{background:var(--rowtint);font-weight:700;border-top:2px solid var(--line)}
 .totrow .cell.name{color:var(--ink)}
-.wh{cursor:help;text-decoration:underline dotted var(--orange) 1.5px;text-underline-offset:3px}
+.wh,.bn{cursor:help;text-decoration:underline dotted var(--orange) 1.5px;text-underline-offset:3px}
 .wkstats{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;
   padding:9px 12px;background:var(--rowtint);border-top:1px solid var(--line);font-size:12.5px}
 .wkstats b{font-variant-numeric:tabular-nums}
@@ -97,6 +97,7 @@ select:focus{outline:none;border-color:var(--orange)}
   box-shadow:0 8px 24px #0006;display:none}
 #tip .t-hd{font-weight:700;margin-bottom:2px}
 #tip .t-tot{font-weight:700;border-top:1px solid #ffffff33;margin-top:4px;padding-top:4px}
+#tip .t-note{border-top:1px solid #ffffff33;margin-top:5px;padding-top:5px}
 @media(max-width:640px){
   .wrap{padding:14px 10px 50px}
   .topbar{padding:0 14px}
@@ -134,11 +135,16 @@ select:focus{outline:none;border-color:var(--orange)}
         this station, plus 5.71&nbsp;h/day (40&nbsp;h &divide; 7) for each salaried employee.
         Hover or tap any Worked Hours number for its breakdown. Overnight shifts count toward
         the day the shift started. Holiday pay is excluded.</p>
-        <p>A <b>~</b> means an estimate. On Worked Hours: some crew hadn&rsquo;t punched out
-        yet when the data was pulled, so their hours are estimated from their usual shift
-        length and replaced with real punches at the next refresh. On AA job counts (STL/PVD):
-        AA&rsquo;s system hadn&rsquo;t delivered that day yet, so the 7-day average is shown
-        until it does.</p>
+        <p>An <b>*</b> means the number is affected by data that isn&rsquo;t in
+        yet &mdash; nothing is ever estimated or invented. Hover or tap it for the
+        reason. On <b>Worked Hours</b> it means a shift hadn&rsquo;t been punched out
+        when the file was pulled, so those hours are missing and the figure will rise.
+        On <b>Budgeted Hours</b> it means AA hadn&rsquo;t delivered that day&rsquo;s
+        debriefs, or Closeout Compare found a debrief problem: a duplicate debrief has
+        been removed from the count, while a job on the closeout with no debrief is
+        <i>not</i> added, so the count is understated until it is filed. Once the
+        discrepancy is Closed the debrief is treated as correct and the asterisk goes
+        away.</p>
         <p>Under budget is good; over budget means the station used more labor than the
         aircraft mix earned. Days that haven&rsquo;t finished yet are grayed out.</p>
       </div>
@@ -157,7 +163,14 @@ const DOW = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
 const ALL = "__ALL__";
 let curMonth = DATA.months.length-1, curStation = ALL;
-const saved = sessionStorage.getItem("pulse-station");
+// sessionStorage throws where site data is blocked (private windows, embeds,
+// managed browsers). Remembering the last station is a convenience - it must
+// never stop the page rendering.
+const store = {
+  get(k){ try { return sessionStorage.getItem(k); } catch { return null; } },
+  set(k,v){ try { sessionStorage.setItem(k,v); } catch {} },
+};
+const saved = store.get("pulse-station");
 if (saved && (DATA.station_names.includes(saved) || saved === ALL)) curStation = saved;
 
 function variBadge(pct, over){
@@ -261,22 +274,23 @@ function render(){
     const svcRows = S.services.map((sv,si)=>{
       const cells = days.map(d=>{
         const v = sv.days[d-1], fut = d>elapsed;
-        const isEst = (sv.est_days||[]).includes(d);
         const cls = fut ? "future" : (v ? "" : "zero");
-        return `<div class="cell ${cls}" ${isEst?'title="AA feed hasn\'t delivered this day yet — 7-day average shown"':""}>${isEst?"~":""}${fmt(v)}</div>`;
+        return `<div class="cell ${cls}">${fmt(v)}</div>`;
       }).join("");
       return `<div class="grow"><div class="cell name" title="${sv.kind==="fixed"
         ? "Flat daily budget"
         : "Aircraft receiving this service, from debrief forms"}">${sv.name}</div>${cells}</div>`;
     }).join("");
     const budCells = days.map(d=>{
-      const fut = d>elapsed, isEst = (S.aa_est_days||[]).includes(d);
-      return `<div class="cell ${fut?'future':''}" ${isEst?'title="Includes estimated AA job counts"':""}>${isEst?"~":""}${fmt(S.budgeted[d-1])}</div>`;
+      const fut = d>elapsed, note = (S.budget_notes||{})[d];
+      return `<div class="cell ${fut?'future':''}">${note
+        ? `<span class="bn" tabindex="0" data-d="${d}">${fmt(S.budgeted[d-1])}*</span>`
+        : fmt(S.budgeted[d-1])}</div>`;
     }).join("");
     const wrkCells = days.map(d=>{
-      const fut = d>elapsed, hasEst = (S.est[d-1]||0) > 0;
+      const fut = d>elapsed, note = (S.worked_notes||{})[d];
       return `<div class="cell ${fut?'future':''}"><span class="wh" tabindex="0"
-        data-d="${d}">${hasEst?"~":""}${fmt(S.worked[d-1])}</span></div>`;
+        data-d="${d}">${fmt(S.worked[d-1])}${note?"*":""}</span></div>`;
     }).join("");
     const stats = [];
     if (wk.avg_aircraft!=null) stats.push(`<span><span class="lbl">Avg aircraft/day</span> <b>${fmt(wk.avg_aircraft)}</b></span>`);
@@ -329,7 +343,7 @@ renderControls(); render();
 
 $("#stsel").addEventListener("change", e=>{
   curStation = e.target.value;
-  sessionStorage.setItem("pulse-station", curStation);
+  store.set("pulse-station", curStation);
   render();
 });
 $("#mchips").addEventListener("click", e=>{
@@ -339,7 +353,7 @@ $("#mchips").addEventListener("click", e=>{
 function drill(e){
   const r = e.target.closest(".ovrow[data-st]"); if(!r) return;
   curStation = r.dataset.st;
-  sessionStorage.setItem("pulse-station", curStation);
+  store.set("pulse-station", curStation);
   renderControls(); render(); window.scrollTo({top:0});
 }
 $("#weeks").addEventListener("click", drill);
@@ -349,16 +363,19 @@ $("#weeks").addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" ") dr
 const tip = $("#tip");
 function showTip(el){
   const M = DATA.months[curMonth], S = M.stations[curStation];
-  const d = +el.dataset.d, h = S.hourly[d-1], n = S.salary_heads[d-1];
-  const e = S.est[d-1]||0, en = S.est_n[d-1]||0, sal = n*40/7;
-  const estLine = e > 0
-    ? `<br>In progress: ${en} shift${en===1?"":"s"} not punched out yet,
-       estimated <b>~${fmt(e)} h</b> from usual shift lengths`
-    : "";
-  tip.innerHTML = `<div class="t-hd">Worked hours &middot; ${M.label.split(" ")[0]} ${d}</div>
-    Hourly punches: <b>${fmt(h)} h</b><br>
-    Salaried: ${n} ${n===1?"person":"people"} &times; 5.71 h = <b>${fmt(sal)} h</b>${estLine}
-    <div class="t-tot">Total ${e>0?"~":""}${fmt(h+e+sal)} h</div>`;
+  const d = +el.dataset.d, mon = M.label.split(" ")[0];
+  if (el.classList.contains("bn")) {              // budgeted-hours asterisk
+    tip.innerHTML = `<div class="t-hd">Budgeted hours &middot; ${mon} ${d}</div>
+      ${(S.budget_notes||{})[d]||""}`;
+  } else {                                         // worked-hours cell
+    const h = S.hourly[d-1], n = S.salary_heads[d-1], sal = n*40/7;
+    const note = (S.worked_notes||{})[d];
+    tip.innerHTML = `<div class="t-hd">Worked hours &middot; ${mon} ${d}</div>
+      Hourly punches: <b>${fmt(h)} h</b><br>
+      Salaried: ${n} ${n===1?"person":"people"} &times; 5.71 h = <b>${fmt(sal)} h</b>
+      <div class="t-tot">Total ${fmt(h+sal)} h</div>
+      ${note?`<div class="t-note">* ${note}</div>`:""}`;
+  }
   // getBoundingClientRect is in visual px; the zoomed body positions fixed
   // elements in layout px — divide by the zoom factor to convert
   const Z = pageZoom(), r = el.getBoundingClientRect(),
@@ -371,11 +388,11 @@ function showTip(el){
   tip.style.left = x+"px"; tip.style.top = y+"px";
 }
 function hideTip(){ tip.style.display="none"; }
-document.addEventListener("mouseover", e=>{ const w=e.target.closest(".wh"); if(w) showTip(w); });
-document.addEventListener("mouseout",  e=>{ if(e.target.closest(".wh")) hideTip(); });
-document.addEventListener("focusin",   e=>{ const w=e.target.closest(".wh"); if(w) showTip(w); });
-document.addEventListener("focusout",  e=>{ if(e.target.closest(".wh")) hideTip(); });
-document.addEventListener("click", e=>{ const w=e.target.closest(".wh");
+document.addEventListener("mouseover", e=>{ const w=e.target.closest(".wh,.bn"); if(w) showTip(w); });
+document.addEventListener("mouseout",  e=>{ if(e.target.closest(".wh,.bn")) hideTip(); });
+document.addEventListener("focusin",   e=>{ const w=e.target.closest(".wh,.bn"); if(w) showTip(w); });
+document.addEventListener("focusout",  e=>{ if(e.target.closest(".wh,.bn")) hideTip(); });
+document.addEventListener("click", e=>{ const w=e.target.closest(".wh,.bn");
   if(w){ showTip(w); e.stopPropagation(); } else hideTip(); });
 window.addEventListener("scroll", hideTip, true);
 </script>

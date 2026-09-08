@@ -23,6 +23,9 @@ SOURCE_FILES = [
     "Power Flows/Debriefs/AA Debriefs.csv",
     "Power Flows/Debriefs/APU Wash.xlsx",
     "Power Flows/Debriefs/JSX Debriefs.xlsx",
+    # Closeout-vs-debrief reconciliation: drives the double-debrief
+    # correction and the missing-debrief asterisks.
+    "Power Flows/Debriefs/Closeout Compare.xlsx",
     "Power BI Data Sources/Location Management.csv",
     "Pulse Sheets/Service Budgets.xlsx",
     # Private/MRO pulse locations (one sheet per location; the platform's
