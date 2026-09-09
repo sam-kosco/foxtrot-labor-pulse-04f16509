@@ -911,5 +911,20 @@
         ]
       }
     }
+  },
+  "CVG": {
+    "services": {
+      "envoyfacility": {
+        "kind": "fixed",
+        "aircraft": false,
+        "_comment": "Envoy facility line at CVG, live 2026-09-14: the workbook rate is hours on a working day, run Mon/Wed/Fri only. Nothing before the start date.",
+        "dow_days": [
+          "Mon",
+          "Wed",
+          "Fri"
+        ],
+        "starts": "2026-09-14"
+      }
+    }
   }
 }

@@ -623,6 +623,20 @@ def month_days(year, month):
 DOW_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
+def service_start(svc):
+    """A service's "active as of" date, or None.
+
+    A contract line can start mid-window (CVG's Envoy Facility begins
+    2026-09-14). Before that date the service contributes nothing at all
+    rather than being back-applied over history."""
+    raw = svc.get("starts")
+    if not raw:
+        return None
+    if isinstance(raw, date):
+        return raw
+    return datetime.strptime(str(raw).strip(), "%Y-%m-%d").date()
+
+
 def dow_daily_rates(svc):
     """Per-weekday hours for a fixed service that only runs on set days.
 
@@ -891,11 +905,13 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
             # be blank purely because AA has not delivered.
             uses_aa = any(sp["table"] == "AA_Debriefs"
                           for sp in svc.get("specs", []))
+            starts = service_start(svc)
             if svc["kind"] == "fixed":
                 daily = dow_daily_rates(svc)
                 for d in days:
                     elapsed_day = is_past or d < cutoff
-                    if not elapsed_day:
+                    if not elapsed_day or (starts and
+                                           date(year, month, d) < starts):
                         vals.append(0)
                         continue
                     v = (daily[date(year, month, d).weekday()] if daily
@@ -903,6 +919,9 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
                     vals.append(round(v or 0, 2))
             else:
                 for d in days:
+                    if starts and date(year, month, d) < starts:
+                        vals.append(0)
+                        continue
                     total = 0
                     for spec in svc["specs"]:
                         t = month_tbl.get(spec["table"])

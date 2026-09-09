@@ -36,6 +36,12 @@ The page is intentionally uneditable: ops get a link, not the workbook. The repo
   missing-from-closeout) is paperwork and is ignored; the free-text variants of
   double/missing are ignored too rather than fuzzily parsed, since a wrong match
   would silently move a station's numbers.
+- **A service can start mid-window.** `starts: "YYYY-MM-DD"` on a service in
+  `station_overrides.json` means it contributes nothing before that date rather
+  than being back-applied over history (`service_start`; CVG's Envoy Facility
+  begins 2026-09-14). It applies to counted and fixed services alike. Note a
+  fixed budget still only releases on ELAPSED days, so a future start shows all
+  zeros until the date arrives - that is not a misconfiguration.
 - **Asterisks, not tildes.** `worked_notes` / `budget_notes` are
   `{day: sentence}` maps rendered as `*` with a tooltip. The tilde estimate
   marker is gone.
