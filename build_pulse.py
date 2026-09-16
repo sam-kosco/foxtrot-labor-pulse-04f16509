@@ -300,13 +300,33 @@ def _closeout_kind(text):
     return None
 
 
+# Sheet holding the closeout-vs-debrief discrepancies. Renamed from "Sheet1"
+# on 2026-09-16, which failed every refresh for the day until it was caught;
+# the old name is kept as a fallback and an unknown name now fails with the
+# workbook's actual sheet list instead of a bare pandas ValueError. The
+# workbook's other tab, "Work Order Findings", is a different schema (Finding,
+# not Discrepancy) and is deliberately not read here.
+CLOSEOUT_SHEETS = ("Closeout Findings", "Sheet1")
+
+
+def _closeout_sheet(path):
+    have = pd.ExcelFile(path).sheet_names
+    for name in CLOSEOUT_SHEETS:
+        if name in have:
+            return name
+    raise SystemExit(
+        f"Closeout Compare.xlsx has none of {list(CLOSEOUT_SHEETS)} — its "
+        f"sheets are {have}. Add the new name to CLOSEOUT_SHEETS if it was "
+        f"renamed again.")
+
+
 def load_closeout():
     """Open Missing-from-Debrief / Double-Debrief rows, by (station, date).
 
     A row whose Status is Closed (any case) is settled: the debrief is then
     authoritative, so it neither corrects a count nor raises an asterisk."""
     path = DEBRIEFS / "Closeout Compare.xlsx"
-    t = pd.read_excel(path, sheet_name="Sheet1")
+    t = pd.read_excel(path, sheet_name=_closeout_sheet(path))
     t.columns = [str(c).strip() for c in t.columns]
     rows, closed_n, other = [], 0, 0
     for _, r in t.iterrows():
