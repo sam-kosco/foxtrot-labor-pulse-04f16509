@@ -515,6 +515,35 @@ def load_early_terms():
     return out
 
 
+def load_pay_type_changes():
+    """Employee id -> date their new Salary pay type actually starts.
+
+    Paylocity flips Pay Type Code the day a promotion is entered, but the
+    person keeps being paid hourly until the new pay period. Without this the
+    pulse back-applies the promotion across the whole month: it drops every
+    punch they actually worked (only Hourly punches count) AND adds 40/7 of
+    imputed salaried time a day (Sam, 2026-09-23, Riley Pinterich / LIT).
+
+    Maintained by the roster job (core: pay_type_changes.maintain), which
+    detects the flip and dates it to the start of the next pay period; rows
+    can also be hand-added or their Effective date corrected to whatever
+    payroll actually agreed. Only the hourly->salary direction is deferred.
+    """
+    path = DEFINITIVE_DIR / "Pay Type Changes.csv"
+    out = {}
+    if not path.exists():
+        return out
+    for _, r in pd.read_csv(path, dtype=str).iterrows():
+        if str(r.get("To") or "").strip().lower() != "salary":
+            continue
+        try:
+            out[_norm_eid(r["Employee Id"])] = datetime.strptime(
+                (r["Effective"] or "").strip(), "%Y-%m-%d").date()
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
 def load_employees():
     e = pd.read_csv(PAYLOCITY / "Basic Employee Info.csv", dtype=str, encoding="cp1252")
     e = e[~e["Job Title"].isin(EXCLUDED_TITLES)].copy()
@@ -539,6 +568,22 @@ def load_employees():
     e["labor_dist"] = e["Labor Dist Description"].fillna("").str.strip()
     e["pay_type"] = e["Pay Type Code"].fillna("").str.strip()
     e["id"] = e["Employee Id"].str.strip()
+    # The mirror image of last_day: last_day caps when someone stops counting
+    # as salaried, salary_from sets when they start. Before it they are still
+    # hourly in fact, so their punches count and they impute nothing.
+    pend = load_pay_type_changes()
+    e["salary_from"] = [
+        pend.get(_norm_eid(i)) if p == "Salary" else None
+        for i, p in zip(e["Employee Id"], e["pay_type"])
+    ]
+    deferred = int(sum(1 for v in e["salary_from"] if v is not None))
+    if deferred:
+        who = ", ".join(
+            f"{f} {l} -> Salary {v:%Y-%m-%d}"
+            for f, l, v in zip(e["First Name"], e["Last Name"], e["salary_from"])
+            if v is not None)
+        print(f"pay type changes: {deferred} promotion(s) not yet in effect, "
+              f"still counted hourly ({who})")
     return e
 
 
@@ -619,6 +664,16 @@ def load_hours(emp):
         id2dist.get(i, "") if r == "Not Defined" else r for i, r in zip(eid, raw)
     ]
     h["pay_type"] = eid.map(id2pay).fillna("")
+    # A promotion that has not taken effect yet: these punches are hourly work
+    # and must be counted as such (see load_pay_type_changes).
+    id2from = {i: v for i, v in zip(emp["id"], emp["salary_from"]) if v is not None}
+    if id2from:
+        # map() yields NaN, not None, for everyone not on the list
+        pre = [pd.notna(sf) and wd is not None and wd < sf
+               for sf, wd in zip(eid.map(id2from), h["work_date"])]
+        h.loc[pre, "pay_type"] = "Hourly"
+        print(f"  punch rows re-counted as hourly (promotion not yet in "
+              f"effect): {int(sum(pre))}")
     return h
 
 
@@ -862,8 +917,9 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
             if gated_out(skey, dnum):
                 continue
             cut = date(year, month, dnum)
-            sal_counts[i] += sum(1 for ld in sal_emp["last_day"]
-                                 if ld and ld > cut)
+            sal_counts[i] += sum(
+                1 for ld, sf in zip(sal_emp["last_day"], sal_emp["salary_from"])
+                if ld and ld > cut and (sf is None or cut >= sf))
     # Pre-launch labor (before this station's first debrief) is
     # implementation/training — zero it out rather than score it.
     if launch is not _NO_LAUNCH_GATE:
@@ -1078,7 +1134,8 @@ def check_sources_present():
     roots = {"This Years Hours.csv": PAYLOCITY, "Basic Employee Info.csv": PAYLOCITY,
              "Location Management.csv": LOCMGMT_DIR, "Service Budgets.xlsx": BUDGETS_DIR,
              "Private and MRO Pulse Locations.xlsx": BUDGETS_DIR,
-             "Early Terminations.csv": DEFINITIVE_DIR}
+             "Early Terminations.csv": DEFINITIVE_DIR,
+             "Pay Type Changes.csv": DEFINITIVE_DIR}
     missing = [n for n in SOURCE_NAMES if not (roots.get(n, DEBRIEFS) / n).exists()]
     if missing:
         raise SystemExit(

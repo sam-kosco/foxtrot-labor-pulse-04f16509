@@ -36,6 +36,10 @@ SOURCE_FILES = [
     # Termination Form whom Paylocity still shows Active — salaried
     # imputation stops at their form date (Sam, 2026-08-27).
     "Definitive Lists/Early Terminations.csv",
+    # Promotions Paylocity has already flipped to Salary but payroll does not
+    # pay as salary until a later pay period — the pulse counts these people
+    # hourly until their Effective date (Sam, 2026-09-23).
+    "Definitive Lists/Pay Type Changes.csv",
 ]
 
 # Basenames as they land in the flat CI sources/ directory.
