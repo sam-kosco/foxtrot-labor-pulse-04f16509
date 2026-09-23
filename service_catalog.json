@@ -547,5 +547,27 @@
         ]
       }
     ]
+  },
+  "mainlinerons": {
+    "name": "Mainline RONs",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Ultra_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "Service",
+            "Mainline RON"
+          ]
+        ]
+      }
+    ]
   }
 }
