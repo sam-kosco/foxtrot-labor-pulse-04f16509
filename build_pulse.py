@@ -176,6 +176,20 @@ def load_ultra():
     return out
 
 
+def load_widebody():
+    """Widebody turns (Sam, 2026-09-28) — one row per turn. Sheet1:
+    Date/Name/Tail Number/Location/Customer/Widebody/Sub ID/Job Revenue.
+    Plain sheet (no Excel table), so read_excel like the APU workbook."""
+    t = pd.read_excel(DEBRIEFS / "Widebody Debriefs.xlsx", sheet_name="Sheet1")
+    t.columns = [str(c).strip() for c in t.columns]
+    out = pd.DataFrame({
+        "date": t["Date"].map(to_date),
+        "Location": t["Location"].astype(str).str.strip(),
+        "Tail": t["Tail Number"],
+    })
+    return out[out["date"].notna()]
+
+
 AA_JOB_TYPES = {"DTC": "AA Turn", "RSTC": "AA Turn", "RON": "AA RON",
                 "RRON": "AA RON", "Security": "AA Security",
                 "Ultra": "Ultra", "Shroud": "Shroud Cleaning"}
@@ -283,6 +297,7 @@ CLOSEOUT_PROGRAM_TABLE = {
     "regional": "Envoy_Debriefs", "psa": "PSA_Debriefs",
     "gojet": "GoJet_Debriefs", "mesa": "Mesa_Debriefs",
     "ultra": "Ultra_Debriefs", "breeze": "Breeze_Debriefs",
+    "widebody": "Widebody_Debriefs",
     "jsx": "JSX_Debriefs", "frontier": "Frontier_Debriefs",
 }
 
@@ -952,11 +967,15 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
         lambda d: d is not None and d.year == year and d.month == month)]
         if len(closeout) else closeout)
 
-    # pre-slice each debrief table to this month
+    # pre-slice each debrief table to this month. NB: a zero-row table must
+    # keep its columns — `df[[]]` is COLUMN selection in pandas, which
+    # silently drops them (first hit by the brand-new Widebody table,
+    # 2026-09-28), so empty tables short-circuit through head(0).
     month_tbl = {}
     for tname, df in tables.items():
-        sel = df[[d is not None and d.year == year and d.month == month
-                  for d in df["date"]]].copy()
+        mask = [d is not None and d.year == year and d.month == month
+                for d in df["date"]]
+        sel = df[mask].copy() if mask else df.head(0).copy()
         sel["day"] = [d.day for d in sel["date"]]
         month_tbl[tname] = sel
 
@@ -1161,6 +1180,7 @@ def main():
         "PSA_Debriefs": load_psa(),
         "Breeze_Debriefs": load_breeze(),
         "Ultra_Debriefs": load_ultra(),
+        "Widebody_Debriefs": load_widebody(),
         "Frontier_Debriefs": load_frontier(),
         "AA_Debriefs": load_aa(),
         "APU_Wash": load_apu(),

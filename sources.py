@@ -19,6 +19,7 @@ SOURCE_FILES = [
     "Power Flows/Debriefs/PSA Debriefs.xlsx",
     "Power Flows/Debriefs/Breeze Debriefs.xlsx",
     "Power Flows/Debriefs/Ultra Debriefs.xlsx",
+    "Power Flows/Debriefs/Widebody Debriefs.xlsx",
     "Power Flows/Debriefs/Frontier Debriefs.xlsx",
     "Power Flows/Debriefs/AA Debriefs.csv",
     "Power Flows/Debriefs/APU Wash.xlsx",

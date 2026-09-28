@@ -569,5 +569,23 @@
         ]
       }
     ]
+  },
+  "widebodyturns": {
+    "name": "Widebody Turns",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Widebody_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ]
+        ]
+      }
+    ]
   }
 }

@@ -678,11 +678,13 @@
   "DFW-DAL": {
     "labor_keys": [
       "DFW CABIN",
-      "DAL PRIV"
+      "DAL PRIV",
+      "DFW WIDEBODY"
     ],
     "salary_keys": [
       "DFW CABIN",
-      "DAL PRIV"
+      "DAL PRIV",
+      "DFW WIDEBODY"
     ],
     "_comment": "DFW and DAL merged into one page (Aug 2026): the DFW team does much of the DAL work, so budgets and labor are pooled. Sheet name starts 'DFW', so {LOC} resolves to DFW for the Envoy/Frontier/Regional services taken from the catalog; the Ultra and JSX services are pinned explicitly because Ultras must filter Service and the JSX jobs are logged under DAL, not DFW. Deliberately NOT hours_from_first_debrief: DAL alone carried that flag, and applying it here would erase every DFW hour before DAL's first debrief.",
     "services": {
