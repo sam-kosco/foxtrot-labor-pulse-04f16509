@@ -678,15 +678,13 @@
   "DFW-DAL": {
     "labor_keys": [
       "DFW CABIN",
-      "DAL PRIV",
-      "DFW WIDEBODY"
+      "DAL PRIV"
     ],
     "salary_keys": [
       "DFW CABIN",
-      "DAL PRIV",
-      "DFW WIDEBODY"
+      "DAL PRIV"
     ],
-    "_comment": "DFW and DAL merged into one page (Aug 2026): the DFW team does much of the DAL work, so budgets and labor are pooled. Sheet name starts 'DFW', so {LOC} resolves to DFW for the Envoy/Frontier/Regional services taken from the catalog; the Ultra and JSX services are pinned explicitly because Ultras must filter Service and the JSX jobs are logged under DAL, not DFW. Deliberately NOT hours_from_first_debrief: DAL alone carried that flag, and applying it here would erase every DFW hour before DAL's first debrief.",
+    "_comment": "DFW and DAL merged into one page (Aug 2026): the DFW team does much of the DAL work, so budgets and labor are pooled. Sheet name starts 'DFW', so {LOC} resolves to DFW for the Envoy/Frontier/Regional services taken from the catalog; the Ultra and JSX services are pinned explicitly because Ultras must filter Service and the JSX jobs are logged under DAL, not DFW. Deliberately NOT hours_from_first_debrief: DAL alone carried that flag, and applying it here would erase every DFW hour before DAL's first debrief. The DFW WIDEBODY crew was pooled in here for one day and split back out to its own page on 2026-09-28 (Sam) — its dist, its salaried head and its plain-day attribution all moved to the 'DFW WIDEBODY' entry below.",
     "services": {
       "ultras": {
         "kind": "count",
@@ -844,10 +842,7 @@
         "jsxexteriordetail145",
         "jsxexteriordetailatr"
       ]
-    },
-    "plain_day_dists": [
-      "DFW WIDEBODY"
-    ]
+    }
   },
   "CLE DAY": {
     "labor_keys": [
@@ -931,5 +926,18 @@
         "starts": "2026-09-14"
       }
     }
+  },
+  "DFW WIDEBODY": {
+    "display": "DFW WIDE",
+    "labor_keys": [
+      "DFW WIDEBODY"
+    ],
+    "salary_keys": [
+      "DFW WIDEBODY"
+    ],
+    "plain_day_dists": [
+      "DFW WIDEBODY"
+    ],
+    "_comment": "Widebody split out of DFW-DAL (Sam, 2026-09-28): its own page so the widebody turn budget is scored against the widebody crew's hours instead of being averaged into the DFW-DAL pool. The Service Budgets sheet is 'DFW WIDEBODY' (matching the labor dist); the page is titled DFW WIDE via `display`. Sheet name starts 'DFW', so {LOC} resolves to DFW and the catalog's widebodyturns template counts Widebody_Debriefs rows for Location DFW with no override needed. plain_day_dists repeats here because the crew never works past midnight — a day shift must not be shifted back 12 h onto the previous day."
   }
 }

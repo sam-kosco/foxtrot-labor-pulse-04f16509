@@ -429,7 +429,8 @@ def merge_budget_config(stations, budgets, catalog, overrides):
     station list, service list, and rates; specs come from station_overrides
     first, then stations.json for pre-existing station+service pairs, then the
     service catalog templates ({LOC} = first 3 letters of the sheet name).
-    Unknown service names fall back to a flat daily budget, with a warning."""
+    Unknown service names fall back to a flat daily budget, with a warning.
+    An override may carry "display" to show the sheet under another name."""
     merged = {}
     for st_name, rows in budgets.items():
         code = st_name.strip()[:3].upper()
@@ -477,7 +478,13 @@ def merge_budget_config(stations, budgets, catalog, overrides):
         # Name test first so a facility that gains a counted service keeps the
         # right treatment; fac_only covers any future non-"FAC" naming.
         facility = st_name.strip().upper().endswith("FAC") or fac_only
-        merged[st_name] = {"labor_keys": labor_keys, "salary_keys": salary_keys,
+        # The tab takes the sheet's name unless the override renames it
+        # (Sam, 2026-09-28: the "DFW WIDEBODY" sheet shows as "DFW WIDE").
+        # Renamed HERE, so everything downstream — debrief gates, manager
+        # grouping, the month payload — speaks the one name. The 3-letter
+        # airport code must survive the rename; both forms start "DFW".
+        merged[ovr.get("display", st_name)] = {
+                           "labor_keys": labor_keys, "salary_keys": salary_keys,
                            "fac_only": fac_only, "facility": facility,
                            "hours_from_first_debrief":
                                bool(ovr.get("hours_from_first_debrief")),
