@@ -484,6 +484,7 @@ def merge_budget_config(stations, budgets, catalog, overrides):
                            "labor_from_first_debrief":
                                ovr.get("labor_from_first_debrief"),
                            "shift_window": ovr.get("shift_window"),
+                           "plain_day_dists": ovr.get("plain_day_dists"),
                            "services": services}
     for st in stations:
         if st not in budgets:
@@ -904,14 +905,22 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
             if overnight else \
             ((hsel["punch_hour"] >= lo) & (hsel["punch_hour"] < hi))
         hsel = hsel[inwin & (hsel["punch_hour"] >= 0)]
+    # Per-dist override: a DAY crew pooled into an overnight station keeps
+    # plain calendar-day attribution (Sam, 2026-09-28 — DFW WIDEBODY never
+    # works past midnight; shift-back would push its morning punches onto
+    # yesterday). ASK when adding any new dist: does the crew work past
+    # midnight? See CLAUDE.md.
+    plain_dists = {k.upper() for k in (cfg.get("plain_day_dists") or [])}
 
     def gated_out(dist, dnum):
         g = gates.get(dist)
         return dist in gates and (g is None or date(year, month, dnum) < g)
 
     hourly_pool = hsel[hsel["pay_type"] == "Hourly"]
+    plain_pool = hsel_plain[hsel_plain["pay_type"] == "Hourly"]
     for key in keys:
-        sub = hourly_pool[hourly_pool["labor_dist"].str.upper() == key]
+        pool = plain_pool if key in plain_dists else hourly_pool
+        sub = pool[pool["labor_dist"].str.upper() == key]
         if sub.empty:
             continue
         for d, v in sub.groupby("day")["hours"].sum().items():
