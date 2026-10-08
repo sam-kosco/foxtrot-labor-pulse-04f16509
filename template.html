@@ -292,6 +292,10 @@ function render(){
     }).join("");
     const svcRow = (sv) => {
       const t = sv.kind==="fixed" ? "Flat daily budget"
+        : sv.priced
+        ? "Aircraft receiving this service, from debrief forms. Its budget is "
+          + "the price of the service on each airframe, at $" + fmt(sv.rate,2)
+          + " of revenue per budgeted hour."
         : "Aircraft receiving this service, from debrief forms";
       return `<div class="grow ${sv.group?"chrow":""}"><div class="cell name"
         title="${t}">${sv.name}</div>${valCells(sv.days)}</div>`;
@@ -346,16 +350,16 @@ function render(){
   $("#weeks").innerHTML = html;
 
   // service budgets card
-  // A count row with no rate of its own (NetJets' services, whose budget
-  // comes from revenue) would read "0.00 h / aircraft", which is a lie.
-  const unitOf = sv => sv.kind==="fixed" ? "h / day"
-    : sv.kind==="revenue" ? "$ / budgeted hour" : "h / aircraft";
-  const rateRow = sv => sv.kind==="count" && !sv.rate
-    ? `<div class="raterow"><span>${sv.name}</span>
-         <b class="unit">counted, no rate</b></div>`
-    : sv.kind==="revenue"
+  // A "priced" service has no hours-per-aircraft rate to show: it is priced
+  // per airframe and earns its own revenue at a dollars-per-hour rate, so
+  // "45.00 h / aircraft" would be nonsense.
+  const unitOf = sv => sv.kind==="fixed" ? "h / day" : "h / aircraft";
+  const rateRow = sv => (sv.priced || sv.kind==="revenue")
     ? `<div class="raterow"><span>${sv.name}</span>
          <b>$${fmt(sv.rate,2)} <span class="unit">of revenue / hour</span></b></div>`
+    : sv.kind==="count" && !sv.rate
+    ? `<div class="raterow"><span>${sv.name}</span>
+         <b class="unit">counted, no rate</b></div>`
     : `<div class="raterow"><span>${sv.name}</span>
          <b>${fmt(sv.rate,2)} <span class="unit">${unitOf(sv)}</span></b></div>`;
   const rates = (S.groups||[]).length

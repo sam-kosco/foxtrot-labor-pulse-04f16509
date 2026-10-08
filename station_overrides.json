@@ -956,7 +956,7 @@
       "JSX",
       "Embraer Facilities"
     ],
-    "_comment": "FLL as one full pulse location (Sam, 2026-10-07), replacing the facility-only FLL FAC page. Four customers, four collapsible groups: JetBlue (APU Wash debriefs, FLL priced exactly as JFK and MCO), NetJets (its own debrief workbook and the bulk of the station's revenue; budgeted from Job Revenue at a dollars-per-hour rate, not per service), JSX (the FLL JSX Private work scope covers four airports - FLL, FXE, OPF and PBI - so each service counts all four, the same shape TEB-HPN uses for two), and Embraer Facilities (the janitorial budget the old FLL FAC page carried). JSX rates mirror the other JSX sheets. {LOC} would resolve to FLL, but every service is pinned explicitly because three of the four groups read a different table and JSX spans four airports.",
+    "_comment": "FLL as one full pulse location (Sam, 2026-10-07), replacing the facility-only FLL FAC page. Four customers, four collapsible groups: JetBlue (APU Wash debriefs, FLL priced exactly as JFK and MCO), NetJets (its own debrief workbook and the bulk of the station's revenue; EVERY service carries its own budget, priced per airframe on the workbook's Pricing Sheet and divided by $45 of revenue per budgeted hour - there is no single hours-per-job rate, a Complete Exterior being $331 on an EMB-505S and $1,071 on a GL7500), JSX (the FLL JSX Private work scope covers four airports - FLL, FXE, OPF and PBI - so each service counts all four, the same shape TEB-HPN uses for two), and Embraer Facilities (the janitorial budget the old FLL FAC page carried). JSX rates mirror the other JSX sheets. {LOC} would resolve to FLL, but every service is pinned explicitly because three of the four groups read a different table and JSX spans four airports.",
     "services": {
       "apuwash": {
         "kind": "count",
@@ -1024,29 +1024,10 @@
         ],
         "group": "JetBlue"
       },
-      "netjetsrevenue": {
-        "kind": "revenue",
-        "aircraft": false,
-        "group": "NetJets",
-        "hidden": true,
-        "specs": [
-          {
-            "fn": "SUMIFS",
-            "table": "NetJets_Debriefs",
-            "sum_col": "Job Revenue",
-            "criteria": [
-              [
-                "Location",
-                "FLL"
-              ]
-            ]
-          }
-        ],
-        "_comment": "Budget = revenue / rate, where the sheet's rate is DOLLARS PER BUDGETED HOUR (45), not hours per job."
-      },
       "netjetsstandardex": {
         "kind": "count",
         "aircraft": false,
+        "group": "NetJets",
         "specs": [
           {
             "fn": "COUNTIFS",
@@ -1064,11 +1045,24 @@
             ]
           }
         ],
-        "group": "NetJets"
+        "hours_from": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Standard Ex $",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ]
       },
       "netjetscompleteex": {
         "kind": "count",
         "aircraft": false,
+        "group": "NetJets",
         "specs": [
           {
             "fn": "COUNTIFS",
@@ -1086,11 +1080,24 @@
             ]
           }
         ],
-        "group": "NetJets"
+        "hours_from": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Complete Ex $",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ]
       },
       "netjetsstandardint": {
         "kind": "count",
         "aircraft": false,
+        "group": "NetJets",
         "specs": [
           {
             "fn": "COUNTIFS",
@@ -1108,11 +1115,24 @@
             ]
           }
         ],
-        "group": "NetJets"
+        "hours_from": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Standard Int $",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ]
       },
       "netjetscompleteint": {
         "kind": "count",
         "aircraft": false,
+        "group": "NetJets",
         "specs": [
           {
             "fn": "COUNTIFS",
@@ -1130,11 +1150,24 @@
             ]
           }
         ],
-        "group": "NetJets"
+        "hours_from": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Complete Int $",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ]
       },
       "netjetsbrightwork": {
         "kind": "count",
         "aircraft": false,
+        "group": "NetJets",
         "specs": [
           {
             "fn": "COUNTIFS",
@@ -1152,11 +1185,24 @@
             ]
           }
         ],
-        "group": "NetJets"
+        "hours_from": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Brightwork $",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ]
       },
       "netjetsextraction": {
         "kind": "count",
         "aircraft": false,
+        "group": "NetJets",
         "specs": [
           {
             "fn": "COUNTIFS",
@@ -1174,11 +1220,24 @@
             ]
           }
         ],
-        "group": "NetJets"
+        "hours_from": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Extraction $",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ]
       },
       "netjetsaglaze": {
         "kind": "count",
         "aircraft": false,
+        "group": "NetJets",
         "specs": [
           {
             "fn": "COUNTIFS",
@@ -1196,11 +1255,24 @@
             ]
           }
         ],
-        "group": "NetJets"
+        "hours_from": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Aglaze $",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ]
       },
       "netjetsdeodorization": {
         "kind": "count",
         "aircraft": false,
+        "group": "NetJets",
         "specs": [
           {
             "fn": "COUNTIFS",
@@ -1218,11 +1290,24 @@
             ]
           }
         ],
-        "group": "NetJets"
+        "hours_from": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Deodorization $",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ]
       },
       "netjetsspot": {
         "kind": "count",
         "aircraft": false,
+        "group": "NetJets",
         "specs": [
           {
             "fn": "COUNTIFS",
@@ -1240,11 +1325,24 @@
             ]
           }
         ],
-        "group": "NetJets"
+        "hours_from": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Spot $",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ]
       },
       "netjetsother": {
         "kind": "count",
         "aircraft": false,
+        "group": "NetJets",
         "specs": [
           {
             "fn": "COUNTIFS",
@@ -1262,7 +1360,19 @@
             ]
           }
         ],
-        "group": "NetJets"
+        "hours_from": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Other $",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ]
       },
       "jsxron": {
         "kind": "count",

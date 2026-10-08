@@ -229,31 +229,81 @@ def load_apu():
     return out
 
 
-# NetJets (FLL, Sam 2026-10-07): one row per job, a 0/1 column per service,
-# and the job's price already priced out in "Job Revenue". The budget is NOT
-# a rate per service — it is the revenue itself, converted at a fixed dollars
-# per budgeted hour (see the "revenue" service kind). The per-service columns
-# are counts for the expanded view only and carry no rate of their own.
+# NetJets (FLL, Sam 2026-10-07): one row per job, a 0/1 column per service.
+# Each service is priced per AIRFRAME on the workbook's own Pricing Sheet, so
+# there is no single hours-per-job rate the way other programs have — every
+# service earns its own price divided by a dollars-per-budgeted-hour rate.
+# The loader prices each flagged service here (a "<col> $" column beside the
+# count) so the per-service budget is the real money, not an average.
+#
+# Verified 2026-10-07: Job Revenue == the sum of those prices plus Other
+# Price on all 102 rows, so this reproduces the workbook exactly rather than
+# re-deriving it differently.
 NETJETS_SERVICES = ["Standard Ex", "Complete Ex", "Standard Int",
                     "Complete Int", "Brightwork", "Extraction", "Aglaze",
                     "Deodorization", "Spot", "Other"]
+# Debrief column -> the row it is priced on in the Pricing Sheet. "Other" is
+# priced per job in the debrief's own "Other Price" column instead.
+NETJETS_PRICED = {"Standard Ex": "Standard Exterior",
+                  "Complete Ex": "Complete Exterior",
+                  "Standard Int": "Standard Interior",
+                  "Complete Int": "Complete Interior",
+                  "Brightwork": "Brightwork", "Extraction": "Extraction",
+                  "Aglaze": "Aglaze", "Deodorization": "Deodorization",
+                  "Spot": "Spot"}
+
+
+def _netjets_prices(path):
+    """{service: {aircraft type: price}} from the workbook's Pricing Sheet."""
+    pr = pd.read_excel(path, sheet_name="Pricing Sheet")
+    pr.columns = [str(c).strip() for c in pr.columns]
+    key = pr.columns[0]
+    types = [c for c in pr.columns[1:] if c and not c.startswith("Unnamed")]
+    out = {}
+    for _, r in pr.iterrows():
+        svc = str(r[key]).strip()
+        if svc and svc.lower() != "nan":
+            out[svc] = {t: pd.to_numeric(r[t], errors="coerce") for t in types}
+    return out
 
 
 def load_netjets():
-    t = pd.read_excel(DEBRIEFS / "NetJets Debriefs.xlsx", sheet_name="Debriefs")
+    path = DEBRIEFS / "NetJets Debriefs.xlsx"
+    prices = _netjets_prices(path)
+    t = pd.read_excel(path, sheet_name="Debriefs")
     t.columns = [str(c).strip() for c in t.columns]
+    ac = t["AC Type"].astype(str).str.strip()
     out = pd.DataFrame({
         "date": t["Date"].map(to_date),
         "Location": "FLL",          # the workbook is FLL-only by construction
         "Tail": t["Tail"],
         "Job Revenue": pd.to_numeric(t["Job Revenue"], errors="coerce").fillna(0),
     })
+    unpriced = set()
     for col in NETJETS_SERVICES:
         if col not in t.columns:
             raise SystemExit(f"NetJets Debriefs is missing column {col!r} "
                              f"(found {list(t.columns)})")
-        out[col] = (pd.to_numeric(t[col], errors="coerce").fillna(0) > 0).astype(int)
-    return out[out["date"].notna()]
+        done = (pd.to_numeric(t[col], errors="coerce").fillna(0) > 0)
+        out[col] = done.astype(int)
+        if col == "Other":
+            money = pd.to_numeric(t.get("Other Price"), errors="coerce").fillna(0)
+        else:
+            tbl = prices.get(NETJETS_PRICED[col], {})
+            money = ac.map(lambda a: tbl.get(a))
+            unpriced |= {(col, a) for a, m in zip(ac[done], money[done])
+                         if pd.isna(m)}
+            money = pd.to_numeric(money, errors="coerce").fillna(0)
+        out[col + " $"] = money.where(done, 0.0)
+    if unpriced:
+        print(f"  !! NetJets: no Pricing Sheet entry for {sorted(unpriced)} — "
+              f"those jobs earn 0 budget hours")
+    out = out[out["date"].notna()]
+    gap = float((out[[c + " $" for c in NETJETS_SERVICES]].sum(axis=1)
+                 - out["Job Revenue"]).abs().sum())
+    print(f"  NetJets: priced {len(out)} job(s); per-service total vs the "
+          f"workbook's Job Revenue differs by ${gap:,.2f}")
+    return out
 
 
 JSX_SERVICES = ["RON", "Interior Detail", "Exterior Detail", "Carpet Extraction"]
@@ -1076,10 +1126,32 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
                     vals.append(total)
             rate = svc.get("rate") or 0
             # Hours this service contributes, per day. Three ways to earn a
-            # budget now: a flat daily allowance, a rate per aircraft
-            # serviced, and — for NetJets at FLL — revenue converted at a
-            # fixed dollars-per-hour (Sam, 2026-10-07: $45 of revenue = 1 h).
-            if svc["kind"] == "fixed":
+            # budget: a flat daily allowance, a rate per aircraft serviced,
+            # and — where the work is priced per airframe rather than timed
+            # (NetJets at FLL) — the service's own REVENUE at a fixed
+            # dollars-per-budgeted-hour (Sam, 2026-10-07: $45 = 1 h).
+            #
+            # `hours_from` splits what a row SHOWS from what it EARNS: the
+            # row still counts aircraft serviced, but its hours come from the
+            # money column beside the count. Without it a NetJets row would
+            # need one hours-per-job rate, and there isn't one — a Complete
+            # Exterior is $331 on an EMB-505S and $1,071 on a GL7500.
+            money = svc.get("hours_from")
+            if money:
+                hrs = []
+                for d in days:
+                    if starts and date(year, month, d) < starts:
+                        hrs.append(0.0)
+                        continue
+                    tot = 0.0
+                    for spec in money:
+                        t = month_tbl.get(spec["table"])
+                        if t is None or t.empty:
+                            continue
+                        m = spec_mask(t, spec) & (t["day"] == d)
+                        tot += float(t.loc[m, spec["sum_col"]].sum())
+                    hrs.append(round(tot / rate, 2) if rate else 0.0)
+            elif svc["kind"] == "fixed":
                 hrs = [round(v, 2) for v in vals]
             elif svc["kind"] == "revenue":
                 hrs = [round(v / rate, 2) if rate else 0.0 for v in vals]
@@ -1092,6 +1164,7 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
                              "aircraft": svc.get("aircraft", False),
                              "uses_aa": uses_aa,
                              "group": svc.get("group"),
+                             "priced": bool(svc.get("hours_from")),
                              "hidden": bool(svc.get("hidden"))})
 
         # Collapsible groups (Sam, 2026-10-07, for FLL): a station may sort
