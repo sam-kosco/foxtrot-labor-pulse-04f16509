@@ -110,25 +110,6 @@
       }
     }
   },
-  "FLL FAC": {
-    "services": {
-      "facilitybudget": {
-        "kind": "fixed",
-        "aircraft": false,
-        "_comment": "Set hours on set weekdays: the workbook rate is the normal working-day budget (49.3), with a 2 h Saturday half-shift and no Sunday run. Weekly total 248.5.",
-        "dow_days": [
-          "Mon",
-          "Tue",
-          "Wed",
-          "Thu",
-          "Fri"
-        ],
-        "dow_overrides": {
-          "Sat": 2
-        }
-      }
-    }
-  },
   "PVD AA CAB": {
     "labor_keys": [
       "PVD AA CAB"
@@ -947,6 +928,10 @@
       "FLL PRIV"
     ],
     "salary_keys": [
+      "FLL FAC",
+      "FLL PRIV"
+    ],
+    "plain_day_dists": [
       "FLL FAC",
       "FLL PRIV"
     ],

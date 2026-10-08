@@ -362,9 +362,20 @@ function render(){
          <b class="unit">counted, no rate</b></div>`
     : `<div class="raterow"><span>${sv.name}</span>
          <b>${fmt(sv.rate,2)} <span class="unit">${unitOf(sv)}</span></b></div>`;
+  // Where every service in a group is priced the same way (NetJets: all ten
+  // at $45 of revenue per hour), ten identical lines say nothing a single
+  // line doesn't — collapse them (Sam, 2026-10-07).
+  const groupRates = g => {
+    const mem = S.services.filter(sv=>sv.group===g.name);
+    const priced = mem.filter(sv=>sv.priced || sv.kind==="revenue");
+    if (mem.length>1 && priced.length===mem.length
+        && new Set(priced.map(sv=>sv.rate)).size===1)
+      return `<div class="raterow"><span>All ${g.name} labor</span>
+        <b>$${fmt(priced[0].rate,2)} <span class="unit">of revenue / hour</span></b></div>`;
+    return mem.map(rateRow).join("");
+  };
   const rates = (S.groups||[]).length
-    ? S.groups.map(g=>`<div class="ratehd">${g.name}</div>` +
-        S.services.filter(sv=>sv.group===g.name).map(rateRow).join("")).join("")
+    ? S.groups.map(g=>`<div class="ratehd">${g.name}</div>` + groupRates(g)).join("")
     : S.services.map(rateRow).join("");
   $("#rates").innerHTML = `<div class="hd">${curStation} Service Budgets</div>${rates}`;
 }
