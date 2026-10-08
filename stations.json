@@ -940,36 +940,6 @@
     ],
     "has_aircraft_kpi": true
   },
-  "FLL FAC": {
-    "labor_keys": [
-      "FLL FAC"
-    ],
-    "salary_keys": [
-      "FLL FAC"
-    ],
-    "labor_key": "FLL FAC",
-    "salary_key": "FLL FAC",
-    "has_salary": true,
-    "fac_only": true,
-    "services": [
-      {
-        "name": "Facility Budget",
-        "sheet_row": 3,
-        "kind": "fixed",
-        "rate": 35.5
-      }
-    ],
-    "aircraft_service_rows": [
-      4
-    ],
-    "budget_table": [
-      [
-        "Facility Budget",
-        35.5
-      ]
-    ],
-    "has_aircraft_kpi": true
-  },
   "GSP": {
     "labor_keys": [
       "GSP CABIN"

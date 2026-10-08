@@ -940,5 +940,681 @@
     ],
     "hours_from_first_debrief": true,
     "_comment": "Widebody split out of DFW-DAL (Sam, 2026-09-28): its own page so the widebody turn budget is scored against the widebody crew's hours instead of being averaged into the DFW-DAL pool. The Service Budgets sheet is 'DFW WIDEBODY' (matching the labor dist); the page is titled DFW WIDE via `display`. Sheet name starts 'DFW', so {LOC} resolves to DFW and the catalog's widebodyturns template counts Widebody_Debriefs rows for Location DFW with no override needed. hours_from_first_debrief (Sam, 2026-09-28): no labor counts before the station's first widebody debrief — the crew's hours before the first turn are ramp-up, and scoring them against a budget that does not exist yet would show the page as massively over. While Widebody Debriefs.xlsx is still empty this suppresses every hour, so the page reads 0/0 until the first turn lands and then starts counting from that day. plain_day_dists repeats here because the crew never works past midnight — a day shift must not be shifted back 12 h onto the previous day."
+  },
+  "FLL": {
+    "labor_keys": [
+      "FLL FAC",
+      "FLL PRIV"
+    ],
+    "salary_keys": [
+      "FLL FAC",
+      "FLL PRIV"
+    ],
+    "group_order": [
+      "JetBlue",
+      "NetJets",
+      "JSX",
+      "Embraer Facilities"
+    ],
+    "_comment": "FLL as one full pulse location (Sam, 2026-10-07), replacing the facility-only FLL FAC page. Four customers, four collapsible groups: JetBlue (APU Wash debriefs, FLL priced exactly as JFK and MCO), NetJets (its own debrief workbook and the bulk of the station's revenue; budgeted from Job Revenue at a dollars-per-hour rate, not per service), JSX (the FLL JSX Private work scope covers four airports - FLL, FXE, OPF and PBI - so each service counts all four, the same shape TEB-HPN uses for two), and Embraer Facilities (the janitorial budget the old FLL FAC page carried). JSX rates mirror the other JSX sheets. {LOC} would resolve to FLL, but every service is pinned explicitly because three of the four groups read a different table and JSX spans four airports.",
+    "services": {
+      "apuwash": {
+        "kind": "count",
+        "aircraft": true,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "APU_Wash",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "APU Wash",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "JetBlue"
+      },
+      "landinggearbaywash": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "APU_Wash",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Landing Gear Bay Wash",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "JetBlue"
+      },
+      "partialbellywash": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "APU_Wash",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Partial Belly Wash",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "JetBlue"
+      },
+      "netjetsrevenue": {
+        "kind": "revenue",
+        "aircraft": false,
+        "group": "NetJets",
+        "hidden": true,
+        "specs": [
+          {
+            "fn": "SUMIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": "Job Revenue",
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ]
+            ]
+          }
+        ],
+        "_comment": "Budget = revenue / rate, where the sheet's rate is DOLLARS PER BUDGETED HOUR (45), not hours per job."
+      },
+      "netjetsstandardex": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Standard Ex",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "NetJets"
+      },
+      "netjetscompleteex": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Complete Ex",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "NetJets"
+      },
+      "netjetsstandardint": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Standard Int",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "NetJets"
+      },
+      "netjetscompleteint": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Complete Int",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "NetJets"
+      },
+      "netjetsbrightwork": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Brightwork",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "NetJets"
+      },
+      "netjetsextraction": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Extraction",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "NetJets"
+      },
+      "netjetsaglaze": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Aglaze",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "NetJets"
+      },
+      "netjetsdeodorization": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Deodorization",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "NetJets"
+      },
+      "netjetsspot": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Spot",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "NetJets"
+      },
+      "netjetsother": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "NetJets_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Other",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "NetJets"
+      },
+      "jsxron": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FXE"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "OPF"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "PBI"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "JSX"
+      },
+      "jsxinteriordetail": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FXE"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "OPF"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "PBI"
+              ],
+              [
+                "Interior Detail",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "JSX"
+      },
+      "jsxcarpetextraction": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FXE"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "OPF"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "PBI"
+              ],
+              [
+                "Carpet Extraction",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "JSX"
+      },
+      "jsxexteriordetail145": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Exterior Detail 145",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FXE"
+              ],
+              [
+                "Exterior Detail 145",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "OPF"
+              ],
+              [
+                "Exterior Detail 145",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "PBI"
+              ],
+              [
+                "Exterior Detail 145",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "JSX"
+      },
+      "jsxexteriordetailatr": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FLL"
+              ],
+              [
+                "Exterior Detail ATR",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "FXE"
+              ],
+              [
+                "Exterior Detail ATR",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "OPF"
+              ],
+              [
+                "Exterior Detail ATR",
+                1
+              ]
+            ]
+          },
+          {
+            "fn": "COUNTIFS",
+            "table": "JSX_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "PBI"
+              ],
+              [
+                "Exterior Detail ATR",
+                1
+              ]
+            ]
+          }
+        ],
+        "group": "JSX"
+      },
+      "facilitybudget": {
+        "kind": "fixed",
+        "aircraft": false,
+        "group": "Embraer Facilities",
+        "dow_days": [
+          "Mon",
+          "Tue",
+          "Wed",
+          "Thu",
+          "Fri"
+        ],
+        "dow_overrides": {
+          "Sat": 2
+        },
+        "_comment": "The former standalone FLL FAC station: 49.3 h on a normal working day, a 2 h Saturday half-shift, no Sunday. Weekly 248.5."
+      }
+    }
   }
 }

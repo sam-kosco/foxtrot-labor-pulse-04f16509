@@ -55,6 +55,14 @@ select:focus{outline:none;border-color:var(--orange)}
 .hrow .cell.name{background:var(--navy);font-size:13px}
 .zero{color:var(--muted)}
 .future{color:var(--future)}
+.grprow .cell{background:var(--rowtint);font-weight:700}
+.grprow .cell.name{cursor:pointer;user-select:none;background:var(--rowtint)}
+.grprow .cell.name:hover{color:var(--accent)}
+.tw{display:inline-block;width:11px;font-size:10px;color:var(--mid);
+  transition:transform .12s ease}
+.grprow.open .tw{transform:rotate(90deg)}
+.chrow .cell{font-weight:400;color:var(--mid)}
+.chrow .cell.name{font-weight:400;padding-left:26px;color:var(--mid)}
 .totrow .cell{background:var(--rowtint);font-weight:700;border-top:2px solid var(--line)}
 .totrow .cell.name{color:var(--ink)}
 .wh,.bn{cursor:help;text-decoration:underline dotted var(--orange) 1.5px;text-underline-offset:3px}
@@ -71,6 +79,9 @@ select:focus{outline:none;border-color:var(--orange)}
   font-size:13px;border-bottom:1px solid var(--line)}
 .raterow:last-child{border-bottom:0}
 .raterow b{font-variant-numeric:tabular-nums}
+.ratehd{background:var(--rowtint);font-weight:700;font-size:11.5px;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--mid);
+  padding:7px 14px;border-bottom:1px solid var(--line)}
 .raterow .unit{color:var(--muted);font-weight:400;font-size:11.5px}
 .note{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--orange);
   border-radius:9px;padding:10px 14px;font-size:12.5px;line-height:1.65;color:var(--ink)}
@@ -170,6 +181,10 @@ const store = {
   get(k){ try { return sessionStorage.getItem(k); } catch { return null; } },
   set(k,v){ try { sessionStorage.setItem(k,v); } catch {} },
 };
+// Which service groups are expanded (FLL's JetBlue / NetJets / JSX /
+// Embraer Facilities). Collapsed by default: the four group rows ARE the
+// page at a glance, and the counts underneath are the detail you open.
+let openGroups = new Set(JSON.parse(store.get("pulse-open-groups") || "[]"));
 const saved = store.get("pulse-station");
 if (saved && (DATA.station_names.includes(saved) || saved === ALL)) curStation = saved;
 
@@ -271,16 +286,35 @@ function render(){
       const dow = DOW[new Date(M.year, M.month-1, d).getDay()];
       return `<div class="cell"><span class="dow">${dow}</span>${d}</div>`;
     }).join("");
-    const svcRows = S.services.map((sv,si)=>{
-      const cells = days.map(d=>{
-        const v = sv.days[d-1], fut = d>elapsed;
-        const cls = fut ? "future" : (v ? "" : "zero");
-        return `<div class="cell ${cls}">${fmt(v)}</div>`;
-      }).join("");
-      return `<div class="grow"><div class="cell name" title="${sv.kind==="fixed"
-        ? "Flat daily budget"
-        : "Aircraft receiving this service, from debrief forms"}">${sv.name}</div>${cells}</div>`;
+    const valCells = (arr, title) => days.map(d=>{
+      const v = arr[d-1], fut = d>elapsed;
+      return `<div class="cell ${fut?"future":(v?"":"zero")}">${fmt(v)}</div>`;
     }).join("");
+    const svcRow = (sv) => {
+      const t = sv.kind==="fixed" ? "Flat daily budget"
+        : "Aircraft receiving this service, from debrief forms";
+      return `<div class="grow ${sv.group?"chrow":""}"><div class="cell name"
+        title="${t}">${sv.name}</div>${valCells(sv.days)}</div>`;
+    };
+    // Grouped stations (FLL) show one row per customer carrying the BUDGET
+    // HOURS that customer earns; opening it reveals the service counts
+    // underneath. Ungrouped stations render exactly as they always have.
+    let svcRows;
+    if ((S.groups||[]).length){
+      svcRows = S.groups.map(g=>{
+        const open = openGroups.has(g.name);
+        const kids = open
+          ? g.children.map(n=>svcRow(S.services.find(x=>x.name===n))).join("")
+          : "";
+        return `<div class="grow grprow ${open?"open":""}"><div class="cell name"
+          role="button" tabindex="0" data-g="${g.name}"
+          title="Budgeted hours for ${g.name} — click for the service counts"
+          ><span class="tw">&#9656;</span> ${g.name}</div>${
+          valCells(g.hours)}</div>${kids}`;
+      }).join("");
+    } else {
+      svcRows = S.services.map(svcRow).join("");
+    }
     const budCells = days.map(d=>{
       const fut = d>elapsed, note = (S.budget_notes||{})[d];
       return `<div class="cell ${fut?'future':''}">${note
@@ -312,9 +346,22 @@ function render(){
   $("#weeks").innerHTML = html;
 
   // service budgets card
-  const rates = S.services.map(sv=>`
-    <div class="raterow"><span>${sv.name}</span>
-      <b>${fmt(sv.rate,2)} <span class="unit">${sv.kind==="fixed"?"h / day":"h / aircraft"}</span></b></div>`).join("");
+  // A count row with no rate of its own (NetJets' services, whose budget
+  // comes from revenue) would read "0.00 h / aircraft", which is a lie.
+  const unitOf = sv => sv.kind==="fixed" ? "h / day"
+    : sv.kind==="revenue" ? "$ / budgeted hour" : "h / aircraft";
+  const rateRow = sv => sv.kind==="count" && !sv.rate
+    ? `<div class="raterow"><span>${sv.name}</span>
+         <b class="unit">counted, no rate</b></div>`
+    : sv.kind==="revenue"
+    ? `<div class="raterow"><span>${sv.name}</span>
+         <b>$${fmt(sv.rate,2)} <span class="unit">of revenue / hour</span></b></div>`
+    : `<div class="raterow"><span>${sv.name}</span>
+         <b>${fmt(sv.rate,2)} <span class="unit">${unitOf(sv)}</span></b></div>`;
+  const rates = (S.groups||[]).length
+    ? S.groups.map(g=>`<div class="ratehd">${g.name}</div>` +
+        S.services.filter(sv=>sv.group===g.name).map(rateRow).join("")).join("")
+    : S.services.map(rateRow).join("");
   $("#rates").innerHTML = `<div class="hd">${curStation} Service Budgets</div>${rates}`;
 }
 
@@ -345,6 +392,18 @@ $("#stsel").addEventListener("change", e=>{
   curStation = e.target.value;
   store.set("pulse-station", curStation);
   render();
+});
+$("#weeks").addEventListener("click", e=>{
+  const g = e.target.closest(".grprow .cell.name"); if(!g) return;
+  const name = g.dataset.g;
+  if (openGroups.has(name)) openGroups.delete(name); else openGroups.add(name);
+  store.set("pulse-open-groups", JSON.stringify([...openGroups]));
+  render();
+});
+$("#weeks").addEventListener("keydown", e=>{
+  if (e.key!=="Enter" && e.key!==" ") return;
+  const g = e.target.closest(".grprow .cell.name"); if(!g) return;
+  e.preventDefault(); g.click();
 });
 $("#mchips").addEventListener("click", e=>{
   const b = e.target.closest(".mchip"); if(!b) return;

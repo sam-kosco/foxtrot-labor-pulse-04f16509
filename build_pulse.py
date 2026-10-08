@@ -229,6 +229,33 @@ def load_apu():
     return out
 
 
+# NetJets (FLL, Sam 2026-10-07): one row per job, a 0/1 column per service,
+# and the job's price already priced out in "Job Revenue". The budget is NOT
+# a rate per service — it is the revenue itself, converted at a fixed dollars
+# per budgeted hour (see the "revenue" service kind). The per-service columns
+# are counts for the expanded view only and carry no rate of their own.
+NETJETS_SERVICES = ["Standard Ex", "Complete Ex", "Standard Int",
+                    "Complete Int", "Brightwork", "Extraction", "Aglaze",
+                    "Deodorization", "Spot", "Other"]
+
+
+def load_netjets():
+    t = pd.read_excel(DEBRIEFS / "NetJets Debriefs.xlsx", sheet_name="Debriefs")
+    t.columns = [str(c).strip() for c in t.columns]
+    out = pd.DataFrame({
+        "date": t["Date"].map(to_date),
+        "Location": "FLL",          # the workbook is FLL-only by construction
+        "Tail": t["Tail"],
+        "Job Revenue": pd.to_numeric(t["Job Revenue"], errors="coerce").fillna(0),
+    })
+    for col in NETJETS_SERVICES:
+        if col not in t.columns:
+            raise SystemExit(f"NetJets Debriefs is missing column {col!r} "
+                             f"(found {list(t.columns)})")
+        out[col] = (pd.to_numeric(t[col], errors="coerce").fillna(0) > 0).astype(int)
+    return out[out["date"].notna()]
+
+
 JSX_SERVICES = ["RON", "Interior Detail", "Exterior Detail", "Carpet Extraction"]
 # Foxtrot took over the JSX contract on 2026-08-01. Rows dated before that are
 # backfilled service history from the previous vendor (they all carry no
@@ -492,6 +519,9 @@ def merge_budget_config(stations, budgets, catalog, overrides):
                                ovr.get("labor_from_first_debrief"),
                            "shift_window": ovr.get("shift_window"),
                            "plain_day_dists": ovr.get("plain_day_dists"),
+                           # Collapsible service groups: the order they render
+                           # in. A station without this renders flat.
+                           "group_order": ovr.get("group_order"),
                            "services": services}
     for st in stations:
         if st not in budgets:
@@ -1045,12 +1075,49 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
                             total += int(m.sum())
                     vals.append(total)
             rate = svc.get("rate") or 0
-            for i, v in enumerate(vals):
-                budgeted[i] += (v if svc["kind"] == "fixed" else v * rate)
+            # Hours this service contributes, per day. Three ways to earn a
+            # budget now: a flat daily allowance, a rate per aircraft
+            # serviced, and — for NetJets at FLL — revenue converted at a
+            # fixed dollars-per-hour (Sam, 2026-10-07: $45 of revenue = 1 h).
+            if svc["kind"] == "fixed":
+                hrs = [round(v, 2) for v in vals]
+            elif svc["kind"] == "revenue":
+                hrs = [round(v / rate, 2) if rate else 0.0 for v in vals]
+            else:
+                hrs = [round(v * rate, 2) for v in vals]
+            for i, h in enumerate(hrs):
+                budgeted[i] += h
             svc_rows.append({"name": svc["name"], "kind": svc["kind"],
-                             "rate": rate, "days": vals,
+                             "rate": rate, "days": vals, "hours": hrs,
                              "aircraft": svc.get("aircraft", False),
-                             "uses_aa": uses_aa})
+                             "uses_aa": uses_aa,
+                             "group": svc.get("group"),
+                             "hidden": bool(svc.get("hidden"))})
+
+        # Collapsible groups (Sam, 2026-10-07, for FLL): a station may sort
+        # its services under named groups. The GROUP row carries the budget
+        # HOURS its members earn; the member rows stay what they have always
+        # been — counts of aircraft serviced — and are hidden until opened.
+        # A service with no group keeps rendering flat, so every other
+        # station is untouched. A `hidden` member earns hours without a row
+        # of its own: NetJets' budget comes from revenue, which is not one
+        # of the services anybody counts.
+        groups = []
+        if any(r["group"] for r in svc_rows):
+            for g in cfg.get("group_order") or []:
+                members = [r for r in svc_rows if r["group"] == g]
+                if not members:
+                    continue
+                hrs = [round(sum(m["hours"][i] for m in members), 2)
+                       for i in range(ndays)]
+                groups.append({"name": g, "hours": hrs,
+                               "children": [m["name"] for m in members
+                                            if not m["hidden"]]})
+            missing = sorted({r["group"] for r in svc_rows if r["group"]}
+                             - {g["name"] for g in groups})
+            if missing:
+                print(f"  !! {st_name}: service group(s) {missing} not in "
+                      f"group_order — they will not render")
 
         # worked hours: hourly punches + salaried imputation, per day —
         # the shared contract in worked_hours()
@@ -1144,6 +1211,7 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
         mtd_w = round(sum(worked[d - 1] for d in mtd_days), 1)
         out[st_name] = {
             "services": svc_rows,
+            "groups": groups,
             "budgeted": [round(b, 2) for b in budgeted],
             "worked": worked,
             "hourly": [round(h, 2) for h in hourly],
@@ -1200,6 +1268,7 @@ def main():
         "Frontier_Debriefs": load_frontier(),
         "AA_Debriefs": load_aa(),
         "APU_Wash": load_apu(),
+        "NetJets_Debriefs": load_netjets(),
         "JSX_Debriefs": load_jsx(),
     }
     for k, v in tables.items():

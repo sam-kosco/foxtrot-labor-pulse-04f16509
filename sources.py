@@ -23,6 +23,9 @@ SOURCE_FILES = [
     "Power Flows/Debriefs/Frontier Debriefs.xlsx",
     "Power Flows/Debriefs/AA Debriefs.csv",
     "Power Flows/Debriefs/APU Wash.xlsx",
+    # NetJets detailing at FLL — the bulk of that station's revenue;
+    # budgeted from Job Revenue, not from a per-service rate.
+    "Power Flows/Debriefs/NetJets Debriefs.xlsx",
     "Power Flows/Debriefs/JSX Debriefs.xlsx",
     # Closeout-vs-debrief reconciliation: drives the double-debrief
     # correction and the missing-debrief asterisks.
