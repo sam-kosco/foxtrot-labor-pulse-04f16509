@@ -139,8 +139,8 @@ tabs. Clicking one opens the format that location actually has:
   Budgeted / Worked / Variance column set covers all 41.
 - The commercial pulse needs `?station=NAME` and `?nav=0` (open on that
   station, hide its own picker so the list owns navigation). **That patch is
-  already written and verified** — saved at
-  `scratchpad/killed-reorg/pulse-deeplink.patch`.
+  already written and verified** — saved at `patches/pulse-deeplink.patch`
+  in this repo (lifted 2026-10-10 from the session-scoped scratchpad).
 - Keep `#labor/mro` working bare but unlinked, as before.
 
 **Order matters**: pulse-web ships the deep link FIRST, platform second. In
@@ -354,12 +354,23 @@ what makes option 1 a later afternoon rather than a rewrite.
 Steps 1–2 are invisible to users and independently verifiable: the pulse must
 build byte-identical output from the new workbook before anything else moves.
 
-## Salvage from the killed plan
+## Salvage from the killed plan — LIFTED to durable homes (2026-10-10)
 
-`scratchpad/killed-reorg/` holds the previous attempt — the Locations list
-(`static/labor.js`), the routing, the permissions collapse, `_mro_can_edit`,
-`mro.month_to_date_budget`, the pulse deep link, and the
-**Labor Dist → Economic Unit → Region mapping** with its validation (two
-dists missing from it, five with nobody booked, the blank-unit trap, AFW
-7 → 55 editors). That directory is session-scoped — anything worth keeping
-should be lifted out before it disappears.
+The previous attempt's working artifacts were lifted out of the
+session-scoped scratchpad before it could disappear:
+
+- **`patches/pulse-deeplink.patch`** (this repo) — the verified
+  `?station=NAME` / `?nav=0` deep link, for order-of-work step 3.
+- **`foxtrot-platform/patches/killed-reorg/`** — everything else: the
+  Locations list (`static/labor.js`), the routing and permissions-collapse
+  file copies, `app-mine.patch`, the full `FULL-working-tree.diff`
+  (contains `_mro_can_edit` per-location write scoping and
+  `mro.month_to_date_budget`, both verified and both still unbuilt on
+  main), `LABOR_ONE_PLAN.md` (the killed plan, historical), and the
+  **Labor Dist → Economic Unit → Region mapping** with its validation
+  (two dists missing from it, five with nobody booked, the blank-unit
+  trap, AFW 7 → 55 editors).
+
+The shipped pieces (one list, renames, one permission, two tabs) landed
+2026-10-10 and differ in places from these drafts — treat the archive as
+a quarry, not a branch.
