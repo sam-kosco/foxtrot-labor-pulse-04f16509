@@ -1,0 +1,132 @@
+{
+  "_comment": "Service groupings for Private/MRO locations (Sam, 2026-10-11). An MRO location's rows are scheduled jobs, and a busy one runs to 60+ distinct names -- MCN alone carries 'light strip adhesive removal' in six spellings. Groups collapse that into a handful of expandable rows: the group row shows the budget hours, opening it shows the jobs. Matching is case-insensitive. _universal applies to every location; a per-location entry wins over it for the same service. Anything unmatched renders as its own row, as before.",
+  "_universal": {
+    "Custom & Extra Labor": {
+      "custom": true
+    },
+    "Gear Wells": {
+      "services": [
+        "MGW1",
+        "MGW2",
+        "MGW3",
+        "NGW1",
+        "NGW2",
+        "NGW3"
+      ]
+    },
+    "Seat Detailing": {
+      "services": [
+        "Seat Frame Detail",
+        "Seat Track Cleaning",
+        "Seat Track Cover Cleaning",
+        "Sidewall Seat Track"
+      ]
+    }
+  },
+  "AFW EMB": {
+    "Exterior": {
+      "services": [
+        "Exterior Dry Wash",
+        "Spar Cleaning",
+        "Flap Track Cleaning"
+      ]
+    },
+    "Interior": {
+      "services": [
+        "Interior Detail",
+        "Dado Panel Cleaning"
+      ]
+    }
+  },
+  "BNA MRO": {
+    "Exterior": {
+      "services": [
+        "Exterior Dry Wash",
+        "Spar Cleaning",
+        "Flap Track Cleaning"
+      ]
+    },
+    "Interior": {
+      "services": [
+        "Interior Detail",
+        "Dado Panel Cleaning"
+      ]
+    }
+  },
+  "MCN EMB": {
+    "Exterior": {
+      "services": [
+        "Exterior Dry Wash",
+        "Spar Cleaning",
+        "Flap Track Cleaning",
+        "Leading Edge Polishing"
+      ]
+    },
+    "Interior": {
+      "services": [
+        "Interior Detail",
+        "Dado Panel Cleaning",
+        "Cockpit Detail"
+      ]
+    },
+    "BFICC": {
+      "services": [
+        "Aft BFICC",
+        "Forward BFICC",
+        "Middle BFICC"
+      ]
+    }
+  },
+  "JAX MRO": {
+    "Wells & Bays": {
+      "services": [
+        "Gear Wells",
+        "Flap Wells",
+        "Aft Equipment Bay"
+      ]
+    }
+  },
+  "SLN MRO": {
+    "Wells & Bays": {
+      "services": [
+        "Gear Wells",
+        "Flap Wells",
+        "Aft Equipment Bay"
+      ]
+    }
+  },
+  "TUS MRO": {
+    "Wells & Bays": {
+      "services": [
+        "Gear Wells",
+        "Flap Wells",
+        "Aft Equipment Bay"
+      ]
+    }
+  },
+  "PVU PRIV": {
+    "Departures": {
+      "services": [
+        "Exterior Departure",
+        "Interior Departure"
+      ]
+    },
+    "Coatings & Protection": {
+      "services": [
+        "Protection",
+        "Xzilon Application",
+        "NuGlaze Polymer Sealant",
+        "Paint Correction + Ceramic Coat",
+        "Skyde Clear Application"
+      ]
+    }
+  },
+  "RFD MRO": {
+    "Wash": {
+      "services": [
+        "Wash",
+        "Wash Prep"
+      ]
+    }
+  }
+}

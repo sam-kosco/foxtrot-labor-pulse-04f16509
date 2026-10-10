@@ -1,6 +1,6 @@
 {
   "_comment": "Per-station counting rules that differ from the workbook derivation in stations.json. This file wins over stations.json and survives an extract_config.py regen. Ultra Debriefs holds two job types in one table (Service = 'Ultra Cleaning' or 'Shroud Cleaning'); the workbook's Ultra COUNTIFS filtered on Location only, so shroud jobs were double-counted as Ultras. Every Ultra count below filters Service explicitly. Stations with hours_from_first_debrief only count labor from their first real debrief onward - earlier hours are implementation and training for a contract that had not started yet (JSX went live 8/1; BNA AA ramped similarly).",
-  "CMH": {
+  "CMH CABIN": {
     "services": {
       "ultras": {
         "kind": "count",
@@ -54,48 +54,6 @@
       "STL AA CAB"
     ],
     "services": {
-      "ultra": {
-        "kind": "count",
-        "aircraft": true,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "Ultra_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "STL"
-              ],
-              [
-                "Service",
-                "Ultra Cleaning"
-              ]
-            ]
-          }
-        ]
-      },
-      "shroudcleaning": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "SUMIFS",
-            "table": "Ultra_Debriefs",
-            "sum_col": "Shroud Count",
-            "criteria": [
-              [
-                "Location",
-                "STL"
-              ],
-              [
-                "Service",
-                "Shroud Cleaning"
-              ]
-            ]
-          }
-        ]
-      },
       "mailrunning": {
         "kind": "fixed",
         "aircraft": false,
@@ -108,7 +66,8 @@
           "Fri"
         ]
       }
-    }
+    },
+    "_comment": " Ultra and Shroud Cleaning moved to the STL AA Ultra page 2026-10-10."
   },
   "PVD AA CAB": {
     "labor_keys": [
@@ -118,7 +77,7 @@
       "PVD AA CAB"
     ]
   },
-  "BNA AA": {
+  "BNA CABIN": {
     "labor_keys": [
       "BNA CABIN"
     ],
@@ -560,7 +519,7 @@
     },
     "hours_from_first_debrief": true
   },
-  "SCF": {
+  "SCF PRIV": {
     "labor_keys": [
       "SCF PRIV"
     ],
@@ -893,7 +852,7 @@
       }
     }
   },
-  "CVG": {
+  "CVG CABIN": {
     "services": {
       "envoyfacility": {
         "kind": "fixed",
@@ -909,7 +868,6 @@
     }
   },
   "DFW WIDEBODY": {
-    "display": "DFW WIDE",
     "labor_keys": [
       "DFW WIDEBODY"
     ],
@@ -1709,6 +1667,59 @@
           "Sat": 2
         },
         "_comment": "The former standalone FLL FAC station: 49.3 h on a normal working day, a 2 h Saturday half-shift, no Sunday. Weekly 248.5."
+      }
+    }
+  },
+  "STL AA Ultra": {
+    "labor_keys": [
+      "STL AA Ultra"
+    ],
+    "salary_keys": [
+      "STL AA Ultra"
+    ],
+    "_comment": "Split out of STL AA CAB (Sam, 2026-10-10): the Ultra crew is its own labor dist and performs the Ultra and Shroud Cleaning services specifically. Before this their 6 people's hours were counted nowhere while their budget sat on STL AA CAB, which made that page read over budget. Needs explicit labor_keys: the convention would give 'STL CABIN' from the first three letters. {LOC} still resolves to STL, which is what the Ultra/Shroud COUNTIFS filter on.",
+    "services": {
+      "ultra": {
+        "kind": "count",
+        "aircraft": true,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "STL"
+              ],
+              [
+                "Service",
+                "Ultra Cleaning"
+              ]
+            ]
+          }
+        ]
+      },
+      "shroudcleaning": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "SUMIFS",
+            "table": "Ultra_Debriefs",
+            "sum_col": "Shroud Count",
+            "criteria": [
+              [
+                "Location",
+                "STL"
+              ],
+              [
+                "Service",
+                "Shroud Cleaning"
+              ]
+            ]
+          }
+        ]
       }
     }
   }

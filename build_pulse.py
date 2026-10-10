@@ -306,6 +306,206 @@ def load_netjets():
     return out
 
 
+# ── Private/MRO locations as pulse stations (Sam, 2026-10-11) ───────────────
+#
+# An MRO location is not a different kind of thing: it has budgeted and worked
+# hours per day exactly as a commercial station does. Only the SHAPE of its
+# config differs — the budget comes from a drag-and-drop forecast rather than
+# debrief counts.
+#
+# Rather than teach the build a second kind of station, each scheduled job is
+# exploded into one row per working day in a synthetic `MRO_Jobs` table:
+# date / Location / Service / Hours. That makes an MRO service an ordinary
+# counted service — COUNTIFS gives jobs in progress that day, and `hours_from`
+# (built for NetJets) sums the priced hours beside it. Everything downstream —
+# weeks, KPIs, variance, the overview — then works untouched.
+#
+# PARITY NOTE: the job -> hours rule is implemented three times now (here,
+# engine/mro.py's job_hours, and mro.js's client-side mroRate). They must
+# agree: price / the service's revenue rate, premium services on the premium
+# goal, spread evenly across the job's working days. A test below compares
+# this build's totals against the platform's for the same window.
+MRO_WORKBOOK = "Private and MRO Pulse Locations.xlsx"
+MRO_SCHEDULES = "MRO Schedules"
+
+
+def _mro_configs():
+    """One sheet per location; A/B is a key/value block read until the first
+    blank key (same contract engine/mro.py reads)."""
+    wb = openpyxl.load_workbook(BUDGETS_DIR / MRO_WORKBOOK, read_only=True,
+                                data_only=True)
+    out = {}
+    for ws in wb.worksheets:
+        kv = {}
+        for r in range(1, ws.max_row + 1):
+            k = ws.cell(row=r, column=1).value
+            if k is None or str(k).strip() == "":
+                break
+            kv[re.sub(r"\s+", " ", str(k)).strip().lower()] = ws.cell(row=r, column=2).value
+        dists = [d.strip() for d in str(kv.get("labor distribution") or "").split(",") if d.strip()]
+        if not dists:
+            continue
+        def num(key):
+            try:
+                return float(kv.get(key) or 0)
+            except (TypeError, ValueError):
+                return 0.0
+        out[ws.title.strip()] = {
+            "labor_dists": dists, "hourly_goal": num("hourly goal"),
+            "facility_hours": num("facility hours"),
+            "premium_goal": num("premium hourly goal"),
+            "premium_services": [x.strip() for x in
+                                 str(kv.get("premium services") or "").split(",") if x.strip()],
+            "attribution": str(kv.get("attribution") or "").strip().lower(),
+        }
+    wb.close()
+    return out
+
+
+def _mro_working_days(job):
+    """ISO dates the job actually works: [start, end] minus `skip`."""
+    try:
+        a = date.fromisoformat(str(job.get("start") or ""))
+        b = date.fromisoformat(str(job.get("end") or ""))
+    except ValueError:
+        return []
+    if b < a:
+        return []
+    skip = set(job.get("skip") or [])
+    out, d = [], a
+    while d <= b:
+        if d.isoformat() not in skip:
+            out.append(d)
+        d += timedelta(days=1)
+    return out
+
+
+def _mro_job_rate(job, cfg):
+    """The revenue rate a job's hours divide by — premium services carry the
+    premium goal; custom jobs and everything else the base."""
+    pg = cfg.get("premium_goal") or 0
+    if pg and not job.get("custom") and job.get("service") in (cfg.get("premium_services") or []):
+        return pg
+    return cfg.get("hourly_goal") or 0
+
+
+def load_mro_jobs(cfgs):
+    """Every scheduled job exploded to one row per working day."""
+    rows = []
+    for loc, cfg in cfgs.items():
+        path = BUDGETS_DIR / MRO_SCHEDULES / f"{loc}.json"
+        if not path.exists():
+            print(f"  !! MRO {loc}: no schedule file — budget will be the "
+                  f"facility allowance only")
+            continue
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        for job in doc.get("jobs", []):
+            wd = _mro_working_days(job)
+            rate = _mro_job_rate(job, cfg)
+            try:
+                price = float(job.get("price"))
+            except (TypeError, ValueError):
+                continue
+            if not wd or not rate:
+                continue
+            # Store the MONEY and the rate it is earned at, not pre-divided
+            # hours: the service row then carries the real revenue rate, so
+            # the rates card can say "$44 of revenue / hour" instead of a
+            # meaningless placeholder, and hours = revenue / rate falls out
+            # of the same `hours_from` machinery NetJets uses.
+            per = price / len(wd)
+            svc = (job.get("service") or job.get("name") or "Custom job").strip()
+            is_custom = bool(job.get("custom")) or not job.get("service")
+            for d in wd:
+                rows.append({"date": d, "Location": loc, "Service": svc,
+                             "Rate": rate, "Revenue": round(per, 4),
+                             "Custom": int(is_custom)})
+    t = pd.DataFrame(rows, columns=["date", "Location", "Service", "Rate",
+                                    "Revenue", "Custom"])
+    print(f"  MRO_Jobs: {len(t)} job-day row(s) across {t['Location'].nunique() if len(t) else 0} location(s)")
+    return t
+
+
+def _mro_group_map(loc):
+    """{SERVICE NAME (upper): group} plus the group order, for one location.
+    Per-location entries win over the universal ones."""
+    raw = json.loads((HERE / "mro_groups.json").read_text(encoding="utf-8"))
+    order, by_svc, custom_group = [], {}, None
+    for src in (raw.get("_universal") or {}, raw.get(loc) or {}):
+        for g, spec in src.items():
+            if g not in order:
+                order.append(g)
+            if spec.get("custom"):
+                custom_group = g
+            for n in spec.get("services") or []:
+                by_svc[n.strip().upper()] = g
+    # per-location wins: re-apply its mapping last
+    for g, spec in (raw.get(loc) or {}).items():
+        for n in spec.get("services") or []:
+            by_svc[n.strip().upper()] = g
+    return by_svc, custom_group, order
+
+
+def mro_stations(cfgs, jobs):
+    """Each MRO location as an ordinary pulse station."""
+    out = {}
+    for loc, cfg in cfgs.items():
+        svcs = []
+        # Service names must be grouped CASE-INSENSITIVELY, because spec_mask
+        # compares upper-cased: two rows for "PAXX DOOR" and "PAXX Door" would
+        # each match the other's jobs and double-count them. Hand-typed job
+        # names collide like this routinely — TUS MHI carries three spellings
+        # of one door-cleaning job. The most common spelling wins the label.
+        seen, rates, custom_jobs = {}, {}, {}
+        if len(jobs):
+            mine = jobs[jobs["Location"] == loc]
+            for n, r, cu in zip(mine["Service"], mine["Rate"], mine["Custom"]):
+                seen.setdefault(n.upper(), []).append(n)
+                rates.setdefault(n.upper(), set()).add(float(r))
+                custom_jobs[n.upper()] = custom_jobs.get(n.upper(), 0) or int(cu)
+        gmap, custom_group, gorder = _mro_group_map(loc)
+        used_groups = []
+        for key in sorted(seen):
+            label = max(set(seen[key]), key=seen[key].count)
+            group = gmap.get(key)
+            if group is None and custom_jobs.get(key):
+                group = custom_group     # every custom job lands in one row
+            if group and group not in used_groups:
+                used_groups.append(group)
+            # One name can legitimately carry two rates — PVU's XZILON
+            # APPLICATION is premium on booked jobs and base on custom ones.
+            # Split those into a row each, keyed on the rate so neither can
+            # match the other's jobs, and say which is which.
+            for rate in sorted(rates[key], reverse=True):
+                crit = [["Location", loc], ["Service", label], ["Rate", rate]]
+                name = label if len(rates[key]) == 1 else (
+                    f"{label} (premium)" if rate == (cfg.get("premium_goal") or 0)
+                    else f"{label} (standard rate)")
+                svcs.append({
+                    "name": name, "kind": "count", "aircraft": False,
+                    "rate": rate, "group": group,
+                    "specs": [{"fn": "COUNTIFS", "table": "MRO_Jobs",
+                               "sum_col": None, "criteria": crit}],
+                    "hours_from": [{"fn": "SUMIFS", "table": "MRO_Jobs",
+                                    "sum_col": "Revenue", "criteria": crit}],
+                })
+        if cfg["facility_hours"]:
+            svcs.append({"name": "Facility Budget", "kind": "fixed",
+                         "aircraft": False, "rate": cfg["facility_hours"]})
+        # MRO crews work day shifts: plain calendar day unless the sheet says
+        # otherwise (the same `Attribution` knob build_mro_hours.py honours).
+        plain = [] if cfg["attribution"] == "shift" else list(cfg["labor_dists"])
+        out[loc] = {"labor_keys": cfg["labor_dists"],
+                    "salary_keys": cfg["labor_dists"],
+                    "fac_only": not seen, "facility": False,
+                    "hours_from_first_debrief": False,
+                    "labor_from_first_debrief": None, "shift_window": None,
+                    "plain_day_dists": plain,
+                    "group_order": [g for g in gorder if g in used_groups],
+                    "vertical": "mro", "services": svcs}
+    return out
+
+
 JSX_SERVICES = ["RON", "Interior Detail", "Exterior Detail", "Carpet Extraction"]
 # Foxtrot took over the JSX contract on 2026-08-01. Rows dated before that are
 # backfilled service history from the previous vendor (they all carry no
@@ -1283,6 +1483,9 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
         mtd_b = round(sum(budgeted[d - 1] for d in mtd_days), 1)
         mtd_w = round(sum(worked[d - 1] for d in mtd_days), 1)
         out[st_name] = {
+            # Which vertical this location is, so the page can offer the
+            # scheduler link on a Private/MRO location (Sam, 2026-10-11).
+            "vertical": cfg.get("vertical", "commercial"),
             "services": svc_rows,
             "groups": groups,
             "budgeted": [round(b, 2) for b in budgeted],
@@ -1329,6 +1532,17 @@ def main():
     budgets = load_budget_workbook()
     print(f"Service Budgets.xlsx: {len(budgets)} location sheets")
     stations = merge_budget_config(base_stations, budgets, catalog, overrides)
+    # Private/MRO locations join as ordinary stations (Sam, 2026-10-11) — one
+    # list, every location, whichever way its budget is earned.
+    mro_cfgs = _mro_configs()
+    mro_jobs = load_mro_jobs(mro_cfgs)
+    clash = sorted(set(mro_cfgs) & set(stations))
+    if clash:
+        raise SystemExit(f"location name used by both a Service Budgets sheet "
+                         f"and an MRO sheet: {clash}")
+    stations.update(mro_stations(mro_cfgs, mro_jobs))
+    stations = dict(sorted(stations.items(), key=lambda kv: kv[0].upper()))
+    print(f"Private/MRO: {len(mro_cfgs)} location(s); {len(stations)} in total")
     print("loading sources...")
     tables = {
         "Envoy_Debriefs": load_envoy(),
@@ -1343,6 +1557,7 @@ def main():
         "APU_Wash": load_apu(),
         "NetJets_Debriefs": load_netjets(),
         "JSX_Debriefs": load_jsx(),
+        "MRO_Jobs": mro_jobs,
     }
     for k, v in tables.items():
         print(f"  {k}: {len(v)} rows")

@@ -79,6 +79,13 @@ select:focus{outline:none;border-color:var(--orange)}
   font-size:13px;border-bottom:1px solid var(--line)}
 .raterow:last-child{border-bottom:0}
 .raterow b{font-variant-numeric:tabular-nums}
+.schedlink{display:inline-flex;align-items:center;gap:7px;margin-left:auto;
+  background:var(--navy);color:#fff;text-decoration:none;font-weight:600;
+  font-size:12.5px;padding:8px 13px;border-radius:8px;white-space:nowrap}
+.schedlink:hover{background:var(--accent)}
+/* an explicit display beats the UA's [hidden]{display:none}, so the button
+   stayed on screen for commercial stations even with hidden set */
+.schedlink[hidden]{display:none}
 .ratehd{background:var(--rowtint);font-weight:700;font-size:11.5px;
   letter-spacing:.04em;text-transform:uppercase;color:var(--mid);
   padding:7px 14px;border-bottom:1px solid var(--line)}
@@ -132,6 +139,7 @@ select:focus{outline:none;border-color:var(--orange)}
     <label for="stsel">Station</label>
     <select id="stsel" aria-label="Choose station"></select>
     <div class="mchips" id="mchips" role="tablist" aria-label="Month"></div>
+    <a id="sched" class="schedlink" hidden target="_top"></a>
   </div>
   <div class="kpis" id="kpis"></div>
   <div class="cols">
@@ -173,6 +181,7 @@ const fmt = (v, dp=1) => v==null ? "—" :
 const DOW = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
 const ALL = "__ALL__";
+const PLATFORM = "https://foxtrot-platform.azurewebsites.net/";
 let curMonth = DATA.months.length-1, curStation = ALL;
 // sessionStorage throws where site data is blocked (private windows, embeds,
 // managed browsers). Remembering the last station is a convenience - it must
@@ -257,11 +266,26 @@ function renderOverview(){
 }
 
 function render(){
+  // Hide first, show only where it belongs: the overview returns early
+  // below, so anything left visible from the previous station persists.
+  $("#sched").hidden = true;
   if (curStation === ALL){ renderOverview(); return; }
   $("#rates").style.display = "";
   const M = DATA.months[curMonth], S = M.stations[curStation];
   const elapsed = S.elapsed_through;
   $("#title").innerHTML = `${curStation} Labor Pulse <span class="sub">&middot; ${M.label}</span>`;
+
+  // A Private/MRO location is read-only here — its numbers come from the
+  // forecast, which is edited on the platform's board. Offer the way there
+  // rather than leaving the page a dead end (Sam, 2026-10-11). target=_top
+  // so the link escapes the iframe when the platform embeds this page.
+  if (S.vertical === "mro" || S.vertical === "private"){
+    const sched = $("#sched");
+    sched.href = PLATFORM + "#labor/mro/" + encodeURIComponent(curStation);
+    sched.textContent = "✎  Edit the forecast";
+    sched.title = "Open " + curStation + " on the Private/MRO scheduler";
+    sched.hidden = false;
+  }
 
   // KPIs — month to date
   const mtd = S.mtd;
@@ -316,6 +340,10 @@ function render(){
           ><span class="tw">&#9656;</span> ${g.name}</div>${
           valCells(g.hours)}</div>${kids}`;
       }).join("");
+      // A station can mix grouped and loose services — an MRO location
+      // groups its families and leaves the one-offs alone. Loose rows follow
+      // the groups rather than vanishing.
+      svcRows += S.services.filter(sv=>!sv.group && !sv.hidden).map(svcRow).join("");
     } else {
       svcRows = S.services.map(svcRow).join("");
     }
@@ -365,6 +393,20 @@ function render(){
   // Where every service in a group is priced the same way (NetJets: all ten
   // at $45 of revenue per hour), ten identical lines say nothing a single
   // line doesn't — collapse them (Sam, 2026-10-07).
+  // Where EVERY service earns at a revenue rate (an MRO location: each row
+  // is a scheduled job), listing a rate per job is noise — one line per
+  // distinct rate says it all (Sam, 2026-10-11).
+  const allPriced = S.services.length
+    && S.services.every(sv => sv.priced || sv.kind === "revenue");
+  const byRate = () => {
+    const seen = [...new Set(S.services.map(sv => sv.rate))].sort((a,b)=>a-b);
+    return seen.map(r => {
+      const label = seen.length === 1 ? `All ${curStation} labor`
+        : (r === Math.max(...seen) ? "Premium services" : "Standard rate");
+      return `<div class="raterow"><span>${label}</span>
+        <b>$${fmt(r,2)} <span class="unit">of revenue / hour</span></b></div>`;
+    }).join("");
+  };
   const groupRates = g => {
     const mem = S.services.filter(sv=>sv.group===g.name);
     const priced = mem.filter(sv=>sv.priced || sv.kind==="revenue");
@@ -374,8 +416,10 @@ function render(){
         <b>$${fmt(priced[0].rate,2)} <span class="unit">of revenue / hour</span></b></div>`;
     return mem.map(rateRow).join("");
   };
-  const rates = (S.groups||[]).length
+  const rates = allPriced ? byRate()
+    : (S.groups||[]).length
     ? S.groups.map(g=>`<div class="ratehd">${g.name}</div>` + groupRates(g)).join("")
+      + S.services.filter(sv=>!sv.group).map(rateRow).join("")
     : S.services.map(rateRow).join("");
   $("#rates").innerHTML = `<div class="hd">${curStation} Service Budgets</div>${rates}`;
 }
