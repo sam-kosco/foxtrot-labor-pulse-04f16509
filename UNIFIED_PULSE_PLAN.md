@@ -246,16 +246,35 @@ easily in the future."* So the route and the API are keyed by location, not
 by vertical:
 
 ```
-#labor                      the Locations list
+#labor                      the "Pulse Locations" list
 #labor/<location>           that location's page, whichever format it has
+#labor/mro[/<location>]     the Private/MRO board — KEPT as its own tab
 GET /api/labor/locations    the list
 GET /api/labor/location/<name>   one location's payload — the scoping seam
 ```
+
+**Two tabs, not one** (Sam, 2026-10-11). The main tab is **Pulse Locations**
+— every location, both verticals. The **Private/MRO Labor** tab stays beside
+it, so the board has a front door of its own and the `#labor/mro` links
+people already use keep working. The earlier draft retired that tab; it
+shouldn't be. Two routes to the editable board is the point, not an
+accident.
 
 One endpoint per location means a future per-location gate is a decorator on
 one function, not a redesign. The route stops encoding the vertical
 (`#labor/pulse/...` / `#labor/mro/...` both go), which is the point — a
 location's format is a property of the location, not of its URL.
+
+### Reaching the scheduler from a pulse page — BUILT 2026-10-11
+
+A Private/MRO location renders as a read-only pulse page, so it needed a way
+out or it was a dead end: its numbers come from a forecast you cannot reach.
+Every MRO/Private page now carries an **"✎ Edit the forecast"** link to
+`#labor/mro/<location>` on the platform, with `target="_top"` so it escapes
+the iframe when the platform embeds the page. Commercial pages don't show it.
+
+This matters most for the standalone pulse URL, which is how most of ops
+reaches the page today and which has no platform chrome around it at all.
 
 ### The catch worth knowing before you rely on it
 
