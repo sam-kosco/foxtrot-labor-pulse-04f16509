@@ -210,6 +210,35 @@ is part of this work** — probably a `Goal Rate` key on the sheet, which the
 unified A/B header makes natural, and which would let the other
 fixed-revenue facilities be budgeted the same way instead of by hand.
 
+## Corrected 2026-10-11 — MRO locations are not a different kind of thing
+
+An earlier draft said an MRO location "has no budget-vs-worked day grid to
+render". **That was wrong.** They have exactly the same two series the
+commercial pulse has, per day:
+
+- **budgeted** — `mro.daily_budgets()`: each scheduled job priced at its
+  revenue rate (premium services on the premium goal), spread evenly over
+  the job's working days, plus the flat facility allowance.
+- **worked** — `mro_hours.json`, the same `worked_hours()` contract the
+  commercial build uses, published by the same refresh.
+
+Sampled 2026-10-01..10 to be sure: TUS MHI runs 54.6–194.8 h/day budgeted
+against 0–96.3 worked; PVU 15.2–102.7 against 4.5–79.9.
+
+So the unified list is **apples to apples at day resolution**, not just a
+month-to-date approximation — every one of the 41 locations has budgeted,
+worked and variance on the same terms. There is no second-class row.
+
+**What differs is the destination, not the data.** Clicking a commercial or
+facility location opens the pulse sheet; clicking a Private/MRO location
+opens the drag-and-drop scheduler, because that is how those locations are
+actually operated — the crews forecast there, and it is where their budget
+comes from in the first place (Sam, 2026-10-11).
+
+A consequence worth noting: an MRO location *could* be rendered as a pulse
+sheet, and the data would be correct. That is a presentation choice left
+open, not a constraint. The list does not have to care.
+
 ## Decided 2026-10-10 — one endpoint per location
 
 Sam: *"Each location page should be its own endpoint so I can scope access
