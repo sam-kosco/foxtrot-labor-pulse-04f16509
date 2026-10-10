@@ -12,6 +12,7 @@ from pathlib import Path
 import requests
 
 from sources import SOURCE_FILES as FILES
+from sources import SOURCE_FOLDERS as FOLDERS
 
 TENANT_ID = os.environ["TENANT_ID"]
 CLIENT_ID = os.environ["CLIENT_ID"]
@@ -71,6 +72,33 @@ def main():
         if not ok:
             failed.append(name)
             print(f"  FAIL {name}: giving up after 3 attempts", file=sys.stderr)
+    # Folders are mirrored whole: their contents change as locations are
+    # added, so a fixed file list would go stale without anyone noticing.
+    for folder in FOLDERS:
+        dest = OUT / folder.rsplit("/", 1)[-1]
+        dest.mkdir(exist_ok=True)
+        url = (f"https://graph.microsoft.com/v1.0/drives/{DRIVE_ID}"
+               f"/root:/{requests.utils.quote(folder)}:/children"
+               f"?$select=name,lastModifiedDateTime&$top=200")
+        r = requests.get(url, headers=hdrs, timeout=60)
+        if r.status_code != 200:
+            failed.append(f"{folder} (listing HTTP {r.status_code})")
+            continue
+        kids = [c for c in r.json().get("value", [])
+                if c["name"].lower().endswith(".json")]
+        for c in kids:
+            cu = (f"https://graph.microsoft.com/v1.0/drives/{DRIVE_ID}/root:/"
+                  f"{requests.utils.quote(folder + '/' + c['name'])}:/content")
+            cr = requests.get(cu, headers=hdrs, timeout=120)
+            if cr.status_code == 200:
+                (dest / c["name"]).write_bytes(cr.content)
+                meta[f"{dest.name}/{c['name']}"] = c.get("lastModifiedDateTime")
+            else:
+                failed.append(f"{folder}/{c['name']} (HTTP {cr.status_code})")
+        print(f"  ok  {folder}: {len(kids)} file(s)")
+        if not kids:
+            failed.append(f"{folder} (empty — Private/MRO budgets would be 0)")
+
     (OUT / "sources_meta.json").write_text(json.dumps(meta, indent=1))
     if failed:
         sys.exit(f"aborting: {len(failed)} downloads failed {failed}")

@@ -1515,7 +1515,15 @@ def check_sources_present():
              "Private and MRO Pulse Locations.xlsx": BUDGETS_DIR,
              "Early Terminations.csv": DEFINITIVE_DIR,
              "Pay Type Changes.csv": DEFINITIVE_DIR}
+    from sources import SOURCE_FOLDERS
     missing = [n for n in SOURCE_NAMES if not (roots.get(n, DEBRIEFS) / n).exists()]
+    # A mirrored folder that arrived empty is worse than a missing file: the
+    # build would succeed and publish Private/MRO locations at a 0 budget
+    # against real worked hours (2026-10-10). Fail where it can be seen.
+    for folder in SOURCE_FOLDERS:
+        d = BUDGETS_DIR / folder.rsplit("/", 1)[-1]
+        if not d.is_dir() or not any(d.glob("*.json")):
+            missing.append(folder + "/ (no documents)")
     if missing:
         raise SystemExit(
             "missing source file(s): " + ", ".join(missing) +

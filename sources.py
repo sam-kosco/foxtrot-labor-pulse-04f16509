@@ -46,5 +46,15 @@ SOURCE_FILES = [
     "Definitive Lists/Pay Type Changes.csv",
 ]
 
+# Whole FOLDERS to mirror, because their contents change as locations are
+# added and a fixed list would silently go stale. Each is fetched into a
+# subdirectory of the same name beside the flat files.
+#
+# MRO Schedules holds one forecast document per Private/MRO location and is
+# where those locations' BUDGETS come from. Shipping without it (2026-10-10)
+# published all eight at a 0 budget against real worked hours — exactly the
+# "infinitely over" reading the DFW WIDE gate exists to prevent.
+SOURCE_FOLDERS = ["Pulse Sheets/MRO Schedules"]
+
 # Basenames as they land in the flat CI sources/ directory.
 SOURCE_NAMES = [p.rsplit("/", 1)[-1] for p in SOURCE_FILES]
