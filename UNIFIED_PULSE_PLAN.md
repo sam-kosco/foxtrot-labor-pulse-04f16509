@@ -153,6 +153,63 @@ knowingly rather than by omission.
 
 ---
 
+## Decided 2026-10-10 — naming and the location set
+
+**Rule: a location is named after the labor distribution it counts.** Four
+pages keep compound names because they genuinely pool dists, and two split
+one dist between them:
+
+| keep as-is | why |
+|---|---|
+| `BUR-SNA`, `DFW-DAL`, `FLL`, `TEB-HPN` | pool two dists each |
+| `CLE DAY`, `CLE NIGHT` | split one dist (`CLE AA`) by shift window |
+
+**`IAH` splits into `IAH CABIN` and `IAH FAC`** — the only page pooling a
+cabin and a facility crew at the same airport. Note this also fixes a
+standing trap: IAH is a commercial sheet today, so its FACILITY crew's hours
+take the 12-hour shift-back. Split, `IAH FAC` gets plain calendar-day
+attribution for free.
+
+**`STL AA ULTRA` splits out of `STL AA CAB`**, carrying the **Ultra Cleaning
+and Shroud Cleaning** services specifically. Those 6 people's hours are
+counted nowhere today while their budget sits on STL AA CAB, which makes
+STL AA CAB read over budget.
+
+**Renames** (one-to-one dist, name differs — 28 of them). The bulk are the
+`<CODE>` → `<CODE> CABIN` convention (BDL, CAK, CLT, CMH, CVG, DAY, DCA,
+GSP, JFK, LIT, MCO, ORF, SGF, XNA) and the MRO sheets (AFW → `AFW EMB`,
+BNA → `BNA MRO`, JAX → `JAX MRO`, MCN → `MCN EMB`, PVU → `PVU PRIV`,
+RFD → `RFD MRO`, SLN 1V → `SLN MRO`, TUS MHI → `TUS MRO`). One-offs worth
+noticing: **`BNA AA` actually counts `BNA CABIN`**, `STL AA FAC` counts
+`STL FAC`, `TYS` counts `TYS PSA`, `SCF` counts `SCF PRIV`, and **`DFW WIDE`
+counts `DFW WIDEBODY`** — the rule undoes the display rename from 2026-09-28,
+so the `display` key in `station_overrides.json` can go with it.
+
+Renaming an MRO sheet also renames its schedule file
+(`MRO Schedules/<name>.json`) — a migration, not a cell edit.
+
+### Locations still to create
+
+`BNA PRIV`, `CAK PRIV`, `CLE PRIV`, `CVG FEAM`, `DTW PRIV`, `ILN MRO`,
+`MLB STS`, `TPA PRIV` — real operations with no page today. **`LCQ FAC` is
+built and live** (2026-10-10). **`MKE MRO` is dead and counts for nothing.**
+`CAK HQ` is head office and gets no page.
+
+> Sam's 2026-10-10 list named `MKE MRO` among the real locations one sentence
+> after calling MKE dead — read as the latter. (`CGF FEAM` in that list is
+> `CVG FEAM`.) Worth confirming once.
+
+### The facility goal rate
+
+**$30 of revenue per worked hour**, used to turn a fixed-revenue contract
+into a daily budget: `monthly revenue / 30 calendar days / 30`. It is not
+recorded as a constant anywhere — derived from the only two facility
+locations with fixed monthly revenue in `ERP/Fixed Monthly Revenue.xlsx`
+(FLL implies $29.98/h, MLB $31.09/h). **Writing it down somewhere canonical
+is part of this work** — probably a `Goal Rate` key on the sheet, which the
+unified A/B header makes natural, and which would let the other
+fixed-revenue facilities be budgeted the same way instead of by hand.
+
 ## Order of work
 
 1. Build the unified workbook and migrate (zip surgery), leaving both old
