@@ -210,6 +210,50 @@ is part of this work** — probably a `Goal Rate` key on the sheet, which the
 unified A/B header makes natural, and which would let the other
 fixed-revenue facilities be budgeted the same way instead of by hand.
 
+## Decided 2026-10-10 — one endpoint per location
+
+Sam: *"Each location page should be its own endpoint so I can scope access
+easily in the future."* So the route and the API are keyed by location, not
+by vertical:
+
+```
+#labor                      the Locations list
+#labor/<location>           that location's page, whichever format it has
+GET /api/labor/locations    the list
+GET /api/labor/location/<name>   one location's payload — the scoping seam
+```
+
+One endpoint per location means a future per-location gate is a decorator on
+one function, not a redesign. The route stops encoding the vertical
+(`#labor/pulse/...` / `#labor/mro/...` both go), which is the point — a
+location's format is a property of the location, not of its URL.
+
+### The catch worth knowing before you rely on it
+
+**The commercial pulse is a public page.** `pulse_data.json` on the Pages
+site answers **HTTP 200 with no authentication** — every location, every
+day, to anyone with the URL (confirmed 2026-10-10; CLAUDE.md says as much:
+"treat the URL as the access control"). The platform embeds it in an iframe.
+
+So per-location endpoints make the *platform* scopeable while the data
+behind the commercial half stays world-readable. The endpoints are still
+worth building now — they are the right shape and they cost little — but
+**scoping will not actually scope anything until the commercial pulse stops
+being served from a public Pages site.** Two honest ways out when that day
+comes:
+
+1. **Render commercial locations natively**, with the platform fetching
+   `pulse_data.json` server-side and the endpoint returning only the
+   requested location's slice. This is the stated end-state anyway —
+   `static/platform.js`'s own header says the embedded sections "will be
+   re-rendered natively later". Cost: porting the week grid, the group
+   rows and the tooltips into the platform.
+2. **Accept that scoping is advisory** for commercial locations and real
+   only for Private/MRO (already native and server-rendered).
+
+Nothing in this release forecloses either. Building the endpoints now is
+what makes option 1 a later afternoon rather than a rewrite.
+
 ## Order of work
 
 1. Build the unified workbook and migrate (zip surgery), leaving both old
