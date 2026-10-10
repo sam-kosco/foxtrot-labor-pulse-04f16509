@@ -102,6 +102,19 @@ pulse location, consumed by the Foxtrot Platform's Private/MRO Labor calendar (s
 name if one is absent). Wire any new source in there — adding a reader to the build
 without adding the path here is what broke every scheduled refresh on 2026-08-21.
 
+**`SOURCE_FOLDERS` mirrors whole folders**, for inputs whose contents change as
+locations are added and which a fixed file list would silently outgrow. Today that
+is `Pulse Sheets/MRO Schedules` — one forecast document per Private/MRO location,
+and where those locations' BUDGETS come from. `fetch_sources.py` lists each folder's
+children, downloads them into a matching subdirectory, and records each file's
+`lastModifiedDateTime`, so editing a forecast triggers a rebuild on its own.
+`check_sources_present` fails when a mirrored folder is **absent or empty** — a
+missing file already failed loudly, but an empty folder was worse: the build
+succeeded and published all eight Private/MRO locations at a 0 budget against real
+worked hours (shipped that way for one refresh on 2026-10-10 — the same
+"infinitely over" reading the DFW WIDE gate exists to prevent). **Local builds read
+the synced Data Hub and so never reproduce this; only CI does.**
+
 ## Secrets
 
 Same three as `envoy-compliance-tracker` (see that repo's CLAUDE.md): `TENANT_ID`, `CLIENT_ID`, `CLIENT_SECRET` (Foxtrot Report Automation app — secret expires every 24 months; renew in Entra and update here too).

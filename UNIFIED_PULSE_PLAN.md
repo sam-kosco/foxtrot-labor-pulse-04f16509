@@ -1,5 +1,42 @@
 # One pulse, one workbook — plan (drafted 2026-10-08, nothing built)
 
+## Status, 2026-10-11
+
+**Shipped and live:**
+
+- One list of **44 locations** across both verticals, alphabetical. Private/MRO
+  locations are ordinary pulse stations — each scheduled job explodes into one
+  row per working day of a synthetic `MRO_Jobs` table, so an MRO service is a
+  counted service and `hours_from` divides the money beside the count by the
+  job's revenue rate. Budgets verified against `engine/mro.py` per location.
+- **Every location named after the labor dist it counts** — 19 commercial
+  renames, `IAH` split into `IAH CABIN` + `IAH FAC`, `STL AA Ultra` split out
+  of `STL AA CAB`, all 8 MRO sheets and schedule documents renamed. Company
+  budget totals unchanged; worked hours rose, because the STL Ultra crew was
+  counted nowhere before.
+- **Service groups for MRO locations** (`mro_groups.json`) — MCN EMB drops from
+  59 rows to 8 — and an **"✎ Edit the forecast"** link out of every read-only
+  Private/MRO pulse page.
+- **Two tabs**: "Pulse Locations" and "Private/MRO Labor", plus a pinned
+  `#labor/mro/<location>` forecaster page with no switcher.
+- **One permission**: `MRO Labor` retired into `Labor`, granted to everyone,
+  via a one-shot matrix migration. `mro.auto_access` deleted.
+- `SOURCE_FOLDERS` mirrors `Pulse Sheets/MRO Schedules` in CI, and an empty
+  mirrored folder now fails the build.
+
+**Not built:**
+
+- **One merged workbook.** `Service Budgets.xlsx` and `Private and MRO Pulse
+  Locations.xlsx` are still separate files; section 1 below is unchanged and
+  still describes what merging them would take. The pulse reads both, so this
+  is now a tidying step rather than a blocker.
+- **`/api/labor/location/<name>`** per-location endpoints, and the native
+  Locations list behind them. The pulse embed currently IS the list.
+- **Per-location write scoping** for forecasts. Anyone with Labor can edit any
+  location's schedule; the pinned page is the seam.
+
+Everything below is the plan as drafted; read it against the status above.
+
 Sam, 2026-10-08: *"break down the artificial barrier between pulse sheets in
 different verticals. One unified workbook, one locations page, and just have
 the individual location pages have the different formats that currently
