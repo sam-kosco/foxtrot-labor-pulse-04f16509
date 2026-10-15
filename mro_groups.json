@@ -51,6 +51,13 @@
         "Interior Detail",
         "Dado Panel Cleaning"
       ]
+    },
+    "Lavatory Spills": {
+      "services": [
+        "Level 1 Lavatory Spill",
+        "Level 2 Lavatory Spill",
+        "Level 3 Lavatory Spill"
+      ]
     }
   },
   "MCN EMB": {
