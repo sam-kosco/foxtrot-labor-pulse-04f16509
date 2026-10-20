@@ -23,6 +23,14 @@
   via a one-shot matrix migration. `mro.auto_access` deleted.
 - `SOURCE_FOLDERS` mirrors `Pulse Sheets/MRO Schedules` in CI, and an empty
   mirrored folder now fails the build.
+- **The platform's Manage Pulse Locations page is derived, not kept**
+  (2026-10-19). Each station publishes `labor_keys` / `salary_keys` /
+  `attribution`, and the page lists all 45 locations with their dists, hour
+  rule and a forecast-board link, plus the dists that have people and no
+  pulse location (today: BNA PRIV 14, DTW PRIV 10, CLE PRIV 8, TPA PRIV 8,
+  CAK PRIV 3, ILN MRO 3, CVG FEAM 2 — and CAK HQ 19, which is Home Office
+  and belongs on no pulse). It replaced an editable CSV that had drifted to
+  26 rows agreeing with the live list on 6.
 
 **Not built:**
 
