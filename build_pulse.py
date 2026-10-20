@@ -1250,6 +1250,35 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
     return hourly, inc_n, sal_counts, worked
 
 
+def attribution_of(cfg):
+    """How this location's punches are credited to a day, in words.
+
+    The rule is spread across three config knobs and a naming convention, so
+    anyone wanting to know has had to read worked_hours() and infer. Published
+    per station (Sam, 2026-10-19) so the platform's Manage Pulse Locations
+    page can show the truth instead of a hand-typed copy that drifts."""
+    win = cfg.get("shift_window")
+    if win:
+        base = (f"shift window {win['from']:02d}:00–{win['to']:02d}:00 "
+                + ("(overnight: credited to the day it started)"
+                   if win["from"] > win["to"] else "(daytime: calendar day)"))
+    elif cfg.get("facility"):
+        base = "calendar day (facility)"
+    else:
+        plain = {d.upper() for d in (cfg.get("plain_day_dists") or [])}
+        keys = {d.upper() for d in (cfg.get("labor_keys") or [])}
+        if keys and keys <= plain:
+            # every dist is day-shift: saying "12h shift-back, except…" would
+            # name a rule that applies to nothing here
+            base = "calendar day (day crews)"
+        else:
+            base = "12h shift-back (overnight credits the day it started)"
+            rest = [d for d in (cfg.get("plain_day_dists") or [])]
+            if rest:
+                base += f"; calendar day for {', '.join(rest)}"
+    return base
+
+
 def build_month(year, month, stations, tables, hours, emp, closeout, hours_start,
                 labor_gates):
     ndays = month_days(year, month)
@@ -1492,6 +1521,11 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
             # Which vertical this location is, so the page can offer the
             # scheduler link on a Private/MRO location (Sam, 2026-10-11).
             "vertical": cfg.get("vertical", "commercial"),
+            # The facts the platform's Manage Pulse Locations page needs, so
+            # it can derive rather than keep a second copy (Sam, 2026-10-19).
+            "labor_keys": list(cfg.get("labor_keys") or []),
+            "salary_keys": list(cfg.get("salary_keys") or []),
+            "attribution": attribution_of(cfg),
             "services": svc_rows,
             "groups": groups,
             "budgeted": [round(b, 2) for b in budgeted],
