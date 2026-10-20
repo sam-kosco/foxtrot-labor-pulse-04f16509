@@ -27,7 +27,13 @@ h2 .sub{color:var(--muted);font-weight:600;font-size:14px}
 select{font:inherit;font-weight:600;color:var(--ink);background:var(--surface);
   border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:180px}
 select:focus{outline:none;border-color:var(--orange)}
-.mchips{display:flex;gap:6px;flex-wrap:wrap}
+.mchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ptier{display:flex;gap:4px;align-items:center}
+.ptier>.plab{font-size:10.5px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);margin-right:2px}
+.psep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+.mchip.year{letter-spacing:.02em}
+.mchip.qtr{min-width:34px;justify-content:center}
 .mchip{font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;
   background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px}
 .mchip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
@@ -138,7 +144,7 @@ select:focus{outline:none;border-color:var(--orange)}
   <div class="controls">
     <label for="stsel">Station</label>
     <select id="stsel" aria-label="Choose station"></select>
-    <div class="mchips" id="mchips" role="tablist" aria-label="Month"></div>
+    <div class="mchips" id="mchips" role="tablist" aria-label="Period"></div>
     <a id="sched" class="schedlink" hidden target="_top"></a>
   </div>
   <div class="kpis" id="kpis"></div>
@@ -182,7 +188,36 @@ const DOW = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
 const ALL = "__ALL__";
 const PLATFORM = "https://foxtrot-platform.azurewebsites.net/";
-let curMonth = DATA.months.length-1, curStation = ALL;
+// The period hierarchy: year > quarter > month (Sam, 2026-10-20). It is
+// deliberately NOT remembered between visits — the page always opens on the
+// current month, so a link shared or a tab reopened shows today's position
+// rather than wherever someone last clicked.
+const CUR = DATA.months.length-1;
+let curPeriod = { kind:"month", i: CUR };
+let curStation = ALL;
+
+const qOf = m => Math.floor((m.month-1)/3)+1;
+const periodOf = () => {
+  if (curPeriod.kind === "month") return [DATA.months[curPeriod.i]];
+  if (curPeriod.kind === "quarter")
+    return DATA.months.filter(m => m.year===curPeriod.year && qOf(m)===curPeriod.q);
+  return DATA.months.filter(m => m.year===curPeriod.year);
+};
+const periodLabel = () => {
+  if (curPeriod.kind === "month") return DATA.months[curPeriod.i].label;
+  if (curPeriod.kind === "quarter") return `Q${curPeriod.q} ${curPeriod.year}`;
+  return String(curPeriod.year);
+};
+// What the KPI sub-line should say about how far through the period we are.
+const periodNote = () => {
+  const ms = periodOf(), last = ms[ms.length-1];
+  const live = last === DATA.months[CUR];
+  if (curPeriod.kind === "month")
+    return live ? `through day ${last.stations[Object.keys(last.stations)[0]].elapsed_through} of ${last.ndays}`
+                : "complete month";
+  const span = ms.length === 1 ? ms[0].label : `${ms[0].label} \u2013 ${last.label}`;
+  return live ? `${span}, to date` : span;
+};
 // sessionStorage throws where site data is blocked (private windows, embeds,
 // managed browsers). Remembering the last station is a convenience - it must
 // never stop the page rendering.
@@ -202,20 +237,32 @@ function variBadge(pct, over){
   return `<span class="badge ${over?'over':'under'}">${pct}% ${over?'Over':'Under'} Budget</span>`;
 }
 
-function mtdOf(M, names){
-  let b = 0, w = 0;
-  names.forEach(n => { b += M.stations[n].mtd.budgeted; w += M.stations[n].mtd.worked; });
+// Totals over any span of months. `mtd` is the whole month for a month that
+// has ended and month-to-date for the live one, so summing it is right for a
+// quarter or a year that runs up to today.
+function stat(b, w){
   return { budgeted: b, worked: w,
            variance: b ? Math.round(Math.abs(1 - w/b) * 100) : null,
            over: b ? w > b : null };
 }
+function totalsFor(months, name){
+  let b = 0, w = 0;
+  months.forEach(M => { const t = M.stations[name]; if(!t) return;
+                        b += t.mtd.budgeted; w += t.mtd.worked; });
+  return stat(b, w);
+}
+function mtdOf(months, names){
+  let b = 0, w = 0;
+  names.forEach(n => { const t = totalsFor(months, n); b += t.budgeted; w += t.worked; });
+  return stat(b, w);
+}
 
-function ovRows(M, names){
+function ovRows(months, names){
   const head = `<div class="ovrow head"><div class="cell name">Station</div>
-    <div class="cell num">Budgeted MTD</div><div class="cell num">Worked MTD</div>
+    <div class="cell num">Budgeted</div><div class="cell num">Worked</div>
     <div class="cell num">Variance</div></div>`;
   const rows = names.map(n => {
-    const t = M.stations[n].mtd;
+    const t = totalsFor(months, n);
     return `<div class="ovrow" data-st="${n}" role="button" tabindex="0">
       <div class="cell name">${n}</div>
       <div class="cell num">${fmt(t.budgeted)}</div>
@@ -225,19 +272,40 @@ function ovRows(M, names){
   return `<div class="scroller"><div class="ovbody">${head}${rows}</div></div>`;
 }
 
+// For a quarter or a year: how the period breaks down, month by month. The
+// day grid only makes sense for a single month, so this takes its place.
+function monthBreakdown(months, names){
+  const rows = months.map(M => {
+    const t = mtdOf([M], names);
+    return `<div class="ovrow"><div class="cell name">${M.label}</div>
+      <div class="cell num">${fmt(t.budgeted)}</div>
+      <div class="cell num">${fmt(t.worked)}</div>
+      <div class="cell num">${variBadge(t.variance, t.over)}</div></div>`;
+  }).join("");
+  const tot = mtdOf(months, names);
+  const head = `<div class="ovrow head"><div class="cell name">Month</div>
+    <div class="cell num">Budgeted</div><div class="cell num">Worked</div>
+    <div class="cell num">Variance</div></div>`;
+  const foot = `<div class="ovrow head"><div class="cell name">${periodLabel()} total</div>
+    <div class="cell num">${fmt(tot.budgeted)}</div>
+    <div class="cell num">${fmt(tot.worked)}</div>
+    <div class="cell num">${variBadge(tot.variance, tot.over)}</div></div>`;
+  return `<div class="ovtable"><div class="scroller"><div class="ovbody">${head}${rows}${foot}</div></div></div>`;
+}
+
 function renderOverview(){
-  const M = DATA.months[curMonth];
+  const months = periodOf();
   const names = DATA.station_names;
-  $("#title").innerHTML = `All Locations Labor Pulse <span class="sub">&middot; ${M.label}</span>`;
-  const tot = mtdOf(M, names);
-  const nOver = names.filter(n => M.stations[n].mtd.over).length;
+  $("#title").innerHTML = `All Locations Labor Pulse <span class="sub">&middot; ${periodLabel()}</span>`;
+  const tot = mtdOf(months, names);
+  const nOver = names.filter(n => totalsFor(months, n).over).length;
   $("#kpis").innerHTML = `
-    <div class="kpi"><div class="kpi-label">Budgeted hours &middot; MTD</div>
+    <div class="kpi"><div class="kpi-label">Budgeted hours</div>
       <div class="kpi-val">${fmt(tot.budgeted)}</div>
       <div class="kpi-sub">all ${names.length} locations</div></div>
-    <div class="kpi"><div class="kpi-label">Worked hours &middot; MTD</div>
+    <div class="kpi"><div class="kpi-label">Worked hours</div>
       <div class="kpi-val">${fmt(tot.worked)}</div>
-      <div class="kpi-sub">punched + salaried</div></div>
+      <div class="kpi-sub">${periodNote()}</div></div>
     <div class="kpi"><div class="kpi-label">Company variance</div>
       <div class="kpi-val" style="font-size:18px;padding-top:6px">${variBadge(tot.variance, tot.over)}</div>
       <div class="kpi-sub">worked vs budgeted</div></div>
@@ -245,20 +313,23 @@ function renderOverview(){
       <div class="kpi-val ${nOver ? "neg" : "pos"}">${nOver}</div>
       <div class="kpi-sub">of ${names.length} locations</div></div>`;
 
-  let html = `<div class="sec">All locations <span class="sub">&middot; click a row for the daily detail</span></div>
-    <div class="ovtable">${ovRows(M, names)}</div>
+  let html = "";
+  if (months.length > 1)
+    html += `<div class="sec">${periodLabel()} by month</div>` + monthBreakdown(months, names);
+  html += `<div class="sec">All locations <span class="sub">&middot; click a row for the ${months.length>1?"detail":"daily detail"}</span></div>
+    <div class="ovtable">${ovRows(months, names)}</div>
     <div class="sec">By Regional Manager <span class="sub">&middot; airport code match, a location can report to more than one manager</span></div>`;
   const mgrs = {};
   names.forEach(n => (DATA.managers[n] || []).forEach(m => (mgrs[m] = mgrs[m] || []).push(n)));
   Object.keys(mgrs).sort().forEach(mgr => {
-    const t = mtdOf(M, mgrs[mgr]);
+    const t = mtdOf(months, mgrs[mgr]);
     html += `<div class="ovtable">
       <div class="ovhd">${mgr}
         <span class="sub">${mgrs[mgr].length} location${mgrs[mgr].length>1?"s":""}</span>
         <span class="sub">Budgeted <b>${fmt(t.budgeted)}</b></span>
         <span class="sub">Worked <b>${fmt(t.worked)}</b></span>
         ${variBadge(t.variance, t.over)}</div>
-      ${ovRows(M, mgrs[mgr])}</div>`;
+      ${ovRows(months, mgrs[mgr])}</div>`;
   });
   $("#weeks").innerHTML = html;
   $("#rates").innerHTML = "";
@@ -271,9 +342,10 @@ function render(){
   $("#sched").hidden = true;
   if (curStation === ALL){ renderOverview(); return; }
   $("#rates").style.display = "";
-  const M = DATA.months[curMonth], S = M.stations[curStation];
+  const months = periodOf();
+  const M = months[months.length-1], S = M.stations[curStation];
   const elapsed = S.elapsed_through;
-  $("#title").innerHTML = `${curStation} Labor Pulse <span class="sub">&middot; ${M.label}</span>`;
+  $("#title").innerHTML = `${curStation} Labor Pulse <span class="sub">&middot; ${periodLabel()}</span>`;
 
   // A Private/MRO location is read-only here — its numbers come from the
   // forecast, which is edited on the platform's board. Offer the way there
@@ -287,19 +359,34 @@ function render(){
     sched.hidden = false;
   }
 
-  // KPIs — month to date
-  const mtd = S.mtd;
+  // KPIs — over the selected period
+  const mtd = totalsFor(months, curStation);
   $("#kpis").innerHTML = `
-    <div class="kpi"><div class="kpi-label">Budgeted hours &middot; MTD</div>
+    <div class="kpi"><div class="kpi-label">Budgeted hours</div>
       <div class="kpi-val">${fmt(mtd.budgeted)}</div>
-      <div class="kpi-sub">through day ${elapsed} of ${M.ndays}</div></div>
-    <div class="kpi"><div class="kpi-label">Worked hours &middot; MTD</div>
+      <div class="kpi-sub">${periodNote()}</div></div>
+    <div class="kpi"><div class="kpi-label">Worked hours</div>
       <div class="kpi-val">${fmt(mtd.worked)}</div>
       <div class="kpi-sub">punched + salaried</div></div>
-    <div class="kpi"><div class="kpi-label">Month variance</div>
+    <div class="kpi"><div class="kpi-label">${months.length>1?"Period":"Month"} variance</div>
       <div class="kpi-val ${mtd.over===null?'':(mtd.over?'neg':'pos')}" style="font-size:18px;padding-top:6px">
         ${variBadge(mtd.variance, mtd.over)}</div>
       <div class="kpi-sub">worked vs budgeted</div></div>`;
+
+  // A quarter or a year has no day grid to show — the per-day tables are a
+  // month's shape. Show how the period broke down by month instead, and drop
+  // the rates card, whose per-job rates are a point-in-time config rather
+  // than something that can be summed over a span.
+  if (months.length > 1){
+    $("#weeks").innerHTML =
+      `<div class="sec">${curStation} &middot; ${periodLabel()} by month</div>`
+      + monthBreakdown(months, [curStation])
+      + `<div class="note" style="margin-top:14px"><p>Pick a single month above
+         for the day-by-day grid and this location's service budgets.</p></div>`;
+    $("#rates").innerHTML = "";
+    $("#rates").style.display = "none";
+    return;
+  }
 
   // week tables
   let html = "";
@@ -429,9 +516,37 @@ function renderControls(){
     `<option value="${ALL}" ${curStation===ALL?"selected":""}>All Locations &mdash; Overview</option>` +
     DATA.station_names.map(n=>
     `<option ${n===curStation?"selected":""}>${n}</option>`).join("");
-  $("#mchips").innerHTML = DATA.months.map((m,i)=>
-    `<button class="mchip ${i===curMonth?'active':''}" data-i="${i}" role="tab"
-      aria-selected="${i===curMonth}">${m.label}</button>`).join("");
+  // Year > quarter > month, left to right. One row so the controls bar stays
+  // compact, and one click reaches any level.
+  const years = [...new Set(DATA.months.map(m=>m.year))].sort();
+  const chip = (on, cls, attrs, text) =>
+    `<button class="mchip ${cls} ${on?'active':''}" role="tab"
+      aria-selected="${on}" ${attrs}>${text}</button>`;
+  const tier = (lab, inner) =>
+    `<div class="ptier"><span class="plab">${lab}</span>${inner}</div>`;
+
+  const ys = years.map(y =>
+    chip(curPeriod.kind==="year" && curPeriod.year===y, "year",
+         `data-kind="year" data-year="${y}"`, y)).join("");
+
+  const qs = [];
+  years.forEach(y => [...new Set(DATA.months.filter(m=>m.year===y).map(qOf))]
+    .sort().forEach(q => qs.push(chip(
+      curPeriod.kind==="quarter" && curPeriod.year===y && curPeriod.q===q, "qtr",
+      `data-kind="quarter" data-year="${y}" data-q="${q}"`,
+      years.length>1 ? `Q${q} ${String(y).slice(2)}` : `Q${q}`))));
+
+  const ms = DATA.months.map((m,i)=> chip(
+    curPeriod.kind==="month" && curPeriod.i===i, "mon",
+    `data-kind="month" data-i="${i}"`,
+    // "April 2026" is too wide for twelve of them; the year is on the tier
+    // above and in the title.
+    years.length>1 ? m.label : m.label.replace(/\s+\d{4}$/, ""))).join("");
+
+  $("#mchips").innerHTML =
+    tier("Year", ys) + '<span class="psep"></span>'
+    + tier("Quarter", qs.join("")) + '<span class="psep"></span>'
+    + tier("Month", ms);
 }
 
 // Reload every 30 minutes so an open tab can never show stale data
@@ -466,7 +581,11 @@ $("#weeks").addEventListener("keydown", e=>{
 });
 $("#mchips").addEventListener("click", e=>{
   const b = e.target.closest(".mchip"); if(!b) return;
-  curMonth = +b.dataset.i; renderControls(); render();
+  const k = b.dataset.kind;
+  curPeriod = k === "month"   ? { kind:"month", i:+b.dataset.i }
+            : k === "quarter" ? { kind:"quarter", year:+b.dataset.year, q:+b.dataset.q }
+                              : { kind:"year", year:+b.dataset.year };
+  renderControls(); render();
 });
 function drill(e){
   const r = e.target.closest(".ovrow[data-st]"); if(!r) return;
@@ -480,7 +599,8 @@ $("#weeks").addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" ") dr
 // worked-hours tooltip (single floating element; survives scroll containers)
 const tip = $("#tip");
 function showTip(el){
-  const M = DATA.months[curMonth], S = M.stations[curStation];
+  // Only the single-month day grid has cells to hover, so this is that month.
+  const ms = periodOf(), M = ms[ms.length-1], S = M.stations[curStation];
   const d = +el.dataset.d, mon = M.label.split(" ")[0];
   if (el.classList.contains("bn")) {              // budgeted-hours asterisk
     tip.innerHTML = `<div class="t-hd">Budgeted hours &middot; ${mon} ${d}</div>

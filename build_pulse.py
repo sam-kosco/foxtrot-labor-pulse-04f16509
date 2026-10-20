@@ -29,7 +29,13 @@ else:
     LOCMGMT_DIR = DH / "Power BI Data Sources"
     BUDGETS_DIR = DH / "Pulse Sheets"
     DEFINITIVE_DIR = DH / "Definitive Lists"
-WINDOW_START = date(2026, 5, 1)  # same cutoff the workbook queries hardcode
+# Paylocity's "This Years Hours" export is the binding constraint: detailed
+# punches begin 2026-03-27 (before that it holds only holiday rows, which are
+# excluded anyway), so April is the earliest COMPLETE month and the floor for
+# honest history. March would be five days of labor against a whole month of
+# budget. The old 2026-05-01 cutoff was inherited from the Excel workbook's M
+# queries and was never a data limit. (Sam, 2026-10-20.)
+WINDOW_START = date(2026, 4, 1)
 EXCLUDED_TITLES = {"Director", "Regional Director", "Regional Manager II"}
 TODAY = date.today()
 
@@ -453,7 +459,19 @@ def _mro_group_map(loc):
 
 
 def mro_stations(cfgs, jobs):
-    """Each MRO location as an ordinary pulse station."""
+    """Each MRO location as an ordinary pulse station.
+
+    A location is NOT SCORED before its first scheduled job (Sam, 2026-10-20).
+    The forecast board is a forward-looking planning tool: nobody backfills it,
+    so a month before a location's board was being kept has no budget while the
+    crew's real hours are already in Paylocity. That read as 600% over for the
+    MRO vertical in May 2026 and inflated every company total that included it.
+    The gate suppresses BOTH halves (see build_month) — an MRO location's
+    flat facility budget does not come from the jobs, so gating labor alone
+    would strand it and flip the error to 100% UNDER. Same shape as the DFW
+    WIDE gate, and the date is derived from the data, so it moves on its own
+    if a board is backfilled.
+    """
     out = {}
     for loc, cfg in cfgs.items():
         svcs = []
@@ -504,7 +522,9 @@ def mro_stations(cfgs, jobs):
         out[loc] = {"labor_keys": cfg["labor_dists"],
                     "salary_keys": cfg["labor_dists"],
                     "fac_only": not seen, "facility": False,
-                    "hours_from_first_debrief": False,
+                    # resolves against MRO_Jobs, so "first debrief" is the
+                    # first scheduled job-day for these
+                    "hours_from_first_debrief": True,
                     "labor_from_first_debrief": None, "shift_window": None,
                     "plain_day_dists": plain,
                     "group_order": [g for g in gorder if g in used_groups],
@@ -929,6 +949,10 @@ def merge_budget_config(stations, budgets, catalog, overrides, index=None):
                            "fac_only": fac_only, "facility": facility,
                            "hours_from_first_debrief":
                                bool(ovr.get("hours_from_first_debrief")),
+                           # A hard "not scored before" date, for a location
+                           # with no debriefs of its own to derive one from
+                           # (LCQ FAC: fixed monthly revenue, facility only).
+                           "scored_from": ovr.get("scored_from"),
                            "labor_from_first_debrief":
                                ovr.get("labor_from_first_debrief"),
                            "shift_window": shift_window,
@@ -1560,6 +1584,20 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
                              "priced": bool(svc.get("hours_from")),
                              "hidden": bool(svc.get("hidden"))})
 
+        # A gated station is not scored AT ALL before its launch date
+        # (Sam, 2026-10-20). Gating labor alone leaves any flat budget line
+        # stranded against zero hours, which reads as 100% under - the same
+        # error as before, sign flipped. Counted services are already zero
+        # back there (that is what the launch date means), so this only ever
+        # removes a fixed line that was being released regardless.
+        launch_day = hours_start.get(st_name, _NO_LAUNCH_GATE)
+        if cfg.get("hours_from_first_debrief") or cfg.get("scored_from"):
+            for i in range(ndays):
+                if launch_day is None or date(year, month, i + 1) < launch_day:
+                    budgeted[i] = 0.0
+                    for r in svc_rows:
+                        r["hours"][i] = 0.0
+
         # Collapsible groups (Sam, 2026-10-07, for FLL): a station may sort
         # its services under named groups. The GROUP row carries the budget
         # HOURS its members earn; the member rows stay what they have always
@@ -1776,6 +1814,11 @@ def main():
     closeout = load_closeout()
     apply_double_debriefs(tables, closeout)
     hours_start = first_debrief_dates(stations, tables)
+    for st_name, cfg in stations.items():
+        raw = cfg.get("scored_from")
+        if raw:
+            hours_start[st_name] = datetime.strptime(str(raw), "%Y-%m-%d").date()
+            print(f"  {st_name}: not scored before {hours_start[st_name]}")
     labor_gates = labor_gate_dates(stations, tables)
     months = []
     y, m = WINDOW_START.year, WINDOW_START.month

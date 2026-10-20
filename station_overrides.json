@@ -810,7 +810,7 @@
       "JSX",
       "Embraer Facilities"
     ],
-    "_comment": "FLL as one full pulse location (Sam, 2026-10-07), replacing the facility-only FLL FAC page. Four customers, four collapsible groups: JetBlue (APU Wash debriefs, FLL priced exactly as JFK and MCO), NetJets (its own debrief workbook and the bulk of the station's revenue; EVERY service carries its own budget, priced per airframe on the workbook's Pricing Sheet and divided by $45 of revenue per budgeted hour - there is no single hours-per-job rate, a Complete Exterior being $331 on an EMB-505S and $1,071 on a GL7500), JSX (the FLL JSX Private work scope covers four airports - FLL, FXE, OPF and PBI - so each service counts all four, the same shape TEB-HPN uses for two), and Embraer Facilities (the janitorial budget the old FLL FAC page carried). JSX rates mirror the other JSX sheets. {LOC} would resolve to FLL, but every service is pinned explicitly because three of the four groups read a different table and JSX spans four airports.",
+    "_comment": "FLL's four customers produce no debrief before 2026-05-02, so April scored 20 people's hours against the Embraer facility line alone.",
     "services": {
       "apuwash": {
         "kind": "count",
@@ -1579,10 +1579,11 @@
         },
         "_comment": "The former standalone FLL FAC station: 49.3 h on a normal working day, a 2 h Saturday half-shift, no Sunday. Weekly 248.5."
       }
-    }
+    },
+    "hours_from_first_debrief": true
   },
   "STL AA Ultra": {
-    "_comment": "Split out of STL AA CAB (Sam, 2026-10-10): the Ultra crew is its own labor dist and performs the Ultra and Shroud Cleaning services specifically. Before this their 6 people's hours were counted nowhere while their budget sat on STL AA CAB, which made that page read over budget. Needs explicit labor_keys: the convention would give 'STL CABIN' from the first three letters. {LOC} still resolves to STL, which is what the Ultra/Shroud COUNTIFS filter on.",
+    "_comment": "Split out of STL AA CAB 2026-10-10. Before 2026-09-09 the dist had no hourly staff - the Ultra work was done by STL AA CAB people - so the months between its first debrief and then show this page's budget against one salaried head only. That is a split artifact, not an over-run; the labor sits on STL AA CAB for those months.",
     "services": {
       "ultra": {
         "kind": "count",
@@ -1626,7 +1627,8 @@
           }
         ]
       }
-    }
+    },
+    "hours_from_first_debrief": true
   },
   "IAH CABIN": {
     "_comment": "Mesa (now Republic) debriefs carry a Location since 2026-10-19 (IAD runs the same contract): IAH counts only IAH rows. Blank Location = IAH (build_pulse.load_mesa).",
@@ -1783,5 +1785,23 @@
   "IAD CABIN": {
     "_comment": "New 2026-10-19 on the IAH Mesa/Republic contract. Counts no labor before its first debrief; Mesa services resolve from the catalog with Location=IAD. Labor dist IAD CABIN by convention.",
     "hours_from_first_debrief": true
+  },
+  "OMA FAC": {
+    "services": {
+      "facilitybudget": {
+        "kind": "fixed",
+        "aircraft": false,
+        "_comment": "OMA FAC's crew first punched 2026-06-03; before that the dist was empty and the budget scored against nobody. Date derived from the punches, not a told go-live - correct it if the contract actually started earlier.",
+        "starts": "2026-06-03"
+      }
+    }
+  },
+  "LCQ FAC": {
+    "scored_from": "2026-06-11",
+    "_comment": "LCQ bills a static $44,125/month and the page was created 2026-10-10, so the flat budget was back-applied to the start of the window - 1,471 h a month against a dist whose crew first punched 2026-06-11. It has no debriefs to derive a launch date from, hence the explicit date. Correct it if the contract began earlier."
+  },
+  "BDL CABIN": {
+    "hours_from_first_debrief": true,
+    "_comment": "Breeze is BDL's only counted work and its debriefs start 2026-06-15. Before that the page carried a facility line and one salaried head, reading 138% over on nothing."
   }
 }
