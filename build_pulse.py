@@ -113,6 +113,12 @@ def load_mesa():
     t = read_table(DEBRIEFS / "Mesa Debriefs.xlsx", "Input")
     out = pd.DataFrame({"date": t["Date"].map(to_date),
                         "Tail": t["Tail Number"]})
+    # Location arrived 2026-10-19 (IAD runs the IAH Mesa/Republic contract).
+    # Rows from before it are blank and are all IAH. The Mesa services filter
+    # on it: IAH CABIN pins Location=IAH in station_overrides.json, and the
+    # catalog templates carry {LOC} so an IAD CABIN sheet counts IAD rows.
+    loc = (t["Location"] if "Location" in t.columns else pd.Series("", index=t.index))
+    out["Location"] = loc.fillna("").astype(str).str.strip().str.upper().replace("", "IAH")
     for flag, col in [
         ("IHC", "Interior Heavy Clean (IHC)"), ("RON", "RON Clean (RON)"),
         ("EC", "Exterior Clean (EC)"), ("ED", "Exterior Detail (ED)"),

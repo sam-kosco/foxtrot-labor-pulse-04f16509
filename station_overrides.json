@@ -1722,5 +1722,161 @@
         ]
       }
     }
+  },
+  "IAH CABIN": {
+    "_comment": "Mesa (now Republic) debriefs carry a Location since 2026-10-19 (IAD runs the same contract): IAH counts only IAH rows. Blank Location = IAH (build_pulse.load_mesa).",
+    "services": {
+      "mesaihc": {
+        "kind": "count",
+        "aircraft": true,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "IAH"
+              ],
+              [
+                "IHC",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "mesaron": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "IAH"
+              ],
+              [
+                "RON",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "mesaec": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "IAH"
+              ],
+              [
+                "EC",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "mesaed": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "IAH"
+              ],
+              [
+                "ED",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "mesadisinfect": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "IAH"
+              ],
+              [
+                "ESS",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "mesace": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "IAH"
+              ],
+              [
+                "CE",
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "mesadsc": {
+        "kind": "count",
+        "aircraft": false,
+        "specs": [
+          {
+            "fn": "COUNTIFS",
+            "table": "Mesa_Debriefs",
+            "sum_col": null,
+            "criteria": [
+              [
+                "Location",
+                "IAH"
+              ],
+              [
+                "DSC",
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "IAD CABIN": {
+    "_comment": "New 2026-10-19 on the IAH Mesa/Republic contract. Counts no labor before its first debrief; Mesa services resolve from the catalog with Location=IAD. Labor dist IAD CABIN by convention.",
+    "hours_from_first_debrief": true
   }
 }

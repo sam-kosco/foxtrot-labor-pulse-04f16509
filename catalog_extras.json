@@ -262,5 +262,159 @@
         ]
       }
     ]
+  },
+  "mesaihc": {
+    "name": "Mesa IHC",
+    "kind": "count",
+    "aircraft": true,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "IHC",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesaron": {
+    "name": "Mesa RON",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "RON",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesaec": {
+    "name": "Mesa EC",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "EC",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesaed": {
+    "name": "Mesa ED",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "ED",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesadisinfect": {
+    "name": "Mesa Disinfect",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "ESS",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesace": {
+    "name": "Mesa CE",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "CE",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "mesadsc": {
+    "name": "Mesa DSC",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "Mesa_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Location",
+            "{LOC}"
+          ],
+          [
+            "DSC",
+            1
+          ]
+        ]
+      }
+    ]
   }
 }
