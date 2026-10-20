@@ -820,8 +820,16 @@ def load_budget_workbook():
             out[ws.title.strip()] = rows
     wb.close()
     if index is None:
-        print(f"  !! Service Budgets.xlsx has no {INDEX_SHEET!r} sheet — "
-              f"falling back to overrides and the naming convention")
+        # Tolerated only while the sheet was being rolled out; fatal since
+        # 2026-10-19, when station_overrides.json gave up its copy of these
+        # facts. Without the sheet the 12 pooled and split locations would
+        # quietly fall back to the <CODE> CABIN convention and read the wrong
+        # dists — a stale page with a red workflow beats a confident wrong one.
+        raise SystemExit(
+            f"Service Budgets.xlsx has no {INDEX_SHEET!r} sheet. It is where "
+            f"each location's Labor Dists and day-attribution rule live; "
+            f"nothing else knows them. Restore it from the workbook's "
+            f"version history rather than letting the build guess.")
     else:
         missing = [s for s in out if s not in index]
         if missing:

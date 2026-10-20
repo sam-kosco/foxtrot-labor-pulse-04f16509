@@ -47,12 +47,6 @@
     }
   },
   "STL AA CAB": {
-    "labor_keys": [
-      "STL AA CAB"
-    ],
-    "salary_keys": [
-      "STL AA CAB"
-    ],
     "services": {
       "mailrunning": {
         "kind": "fixed",
@@ -69,21 +63,7 @@
     },
     "_comment": " Ultra and Shroud Cleaning moved to the STL AA Ultra page 2026-10-10."
   },
-  "PVD AA CAB": {
-    "labor_keys": [
-      "PVD AA CAB"
-    ],
-    "salary_keys": [
-      "PVD AA CAB"
-    ]
-  },
   "BNA CABIN": {
-    "labor_keys": [
-      "BNA CABIN"
-    ],
-    "salary_keys": [
-      "BNA CABIN"
-    ],
     "_comment": "Displayed as BNA AA; labor dist is BNA CABIN. Distinct from the BNA FAC sheet.",
     "services": {
       "ultras": {
@@ -132,14 +112,6 @@
     "hours_from_first_debrief": true
   },
   "BUR-SNA": {
-    "labor_keys": [
-      "BUR PRIV",
-      "SNA PRIV"
-    ],
-    "salary_keys": [
-      "BUR PRIV",
-      "SNA PRIV"
-    ],
     "_comment": "JSX. One sheet covering two airports (Excel forbids '/' in sheet names). Debriefs summed over BUR + SNA. NOTE: 'SNA PRIV' does not exist in Paylocity yet - only BUR PRIV contributes worked hours.",
     "services": {
       "jsxron": {
@@ -326,14 +298,6 @@
     "hours_from_first_debrief": true
   },
   "TEB-HPN": {
-    "labor_keys": [
-      "TEB CABIN",
-      "HPN CABIN"
-    ],
-    "salary_keys": [
-      "TEB CABIN",
-      "HPN CABIN"
-    ],
     "_comment": "JSX. Debriefs summed over TEB + HPN.",
     "services": {
       "jsxron": {
@@ -520,12 +484,6 @@
     "hours_from_first_debrief": true
   },
   "SCF PRIV": {
-    "labor_keys": [
-      "SCF PRIV"
-    ],
-    "salary_keys": [
-      "SCF PRIV"
-    ],
     "_comment": "JSX. NOTE: 'SCF PRIV' does not exist in Paylocity yet, so worked hours read 0 until it is created.",
     "services": {
       "jsxron": {
@@ -616,14 +574,6 @@
     "hours_from_first_debrief": true
   },
   "DFW-DAL": {
-    "labor_keys": [
-      "DFW CABIN",
-      "DAL PRIV"
-    ],
-    "salary_keys": [
-      "DFW CABIN",
-      "DAL PRIV"
-    ],
     "_comment": "DFW and DAL merged into one page (Aug 2026): the DFW team does much of the DAL work, so budgets and labor are pooled. Sheet name starts 'DFW', so {LOC} resolves to DFW for the Envoy/Frontier/Regional services taken from the catalog; the Ultra and JSX services are pinned explicitly because Ultras must filter Service and the JSX jobs are logged under DAL, not DFW. Deliberately NOT hours_from_first_debrief: DAL alone carried that flag, and applying it here would erase every DFW hour before DAL's first debrief. The DFW WIDEBODY crew was pooled in here for one day and split back out to its own page on 2026-09-28 (Sam) — its dist, its salaried head and its plain-day attribution all moved to the 'DFW WIDEBODY' entry below.",
     "services": {
       "ultras": {
@@ -785,27 +735,9 @@
     }
   },
   "CLE DAY": {
-    "labor_keys": [
-      "CLE AA"
-    ],
-    "salary_keys": [],
-    "shift_window": {
-      "from": 7,
-      "to": 19
-    },
     "_comment": "CLE's one labor dist (CLE AA) is split into two crews by punch-in clock hour. DAY takes punches starting 07:00-18:59 local and carries no salaried imputation - the single CLE AA salaried head is assigned to NIGHT. Day shifts get plain calendar-day attribution (a 7 AM start belongs to that day, not the previous one). Budget is the facility share on the CLE DAY sheet; all Ultra and Frontier work belongs to NIGHT."
   },
   "CLE NIGHT": {
-    "labor_keys": [
-      "CLE AA"
-    ],
-    "salary_keys": [
-      "CLE AA"
-    ],
-    "shift_window": {
-      "from": 19,
-      "to": 7
-    },
     "_comment": "NIGHT takes CLE AA punches starting 19:00-06:59 local plus ALL CLE AA salaried time. The window wraps midnight, so it keeps the punch-in-minus-12h attribution that groups an overnight shift onto the day it started. Carries the Ultra, Shroud and Frontier work plus its share of the facility budget.",
     "services": {
       "ultras": {
@@ -868,31 +800,10 @@
     }
   },
   "DFW WIDEBODY": {
-    "labor_keys": [
-      "DFW WIDEBODY"
-    ],
-    "salary_keys": [
-      "DFW WIDEBODY"
-    ],
-    "plain_day_dists": [
-      "DFW WIDEBODY"
-    ],
     "hours_from_first_debrief": true,
     "_comment": "Widebody split out of DFW-DAL (Sam, 2026-09-28): its own page so the widebody turn budget is scored against the widebody crew's hours instead of being averaged into the DFW-DAL pool. The Service Budgets sheet is 'DFW WIDEBODY' (matching the labor dist); the page is titled DFW WIDE via `display`. Sheet name starts 'DFW', so {LOC} resolves to DFW and the catalog's widebodyturns template counts Widebody_Debriefs rows for Location DFW with no override needed. hours_from_first_debrief (Sam, 2026-09-28): no labor counts before the station's first widebody debrief — the crew's hours before the first turn are ramp-up, and scoring them against a budget that does not exist yet would show the page as massively over. While Widebody Debriefs.xlsx is still empty this suppresses every hour, so the page reads 0/0 until the first turn lands and then starts counting from that day. plain_day_dists repeats here because the crew never works past midnight — a day shift must not be shifted back 12 h onto the previous day."
   },
   "FLL": {
-    "labor_keys": [
-      "FLL FAC",
-      "FLL PRIV"
-    ],
-    "salary_keys": [
-      "FLL FAC",
-      "FLL PRIV"
-    ],
-    "plain_day_dists": [
-      "FLL FAC",
-      "FLL PRIV"
-    ],
     "group_order": [
       "JetBlue",
       "NetJets",
@@ -1671,12 +1582,6 @@
     }
   },
   "STL AA Ultra": {
-    "labor_keys": [
-      "STL AA Ultra"
-    ],
-    "salary_keys": [
-      "STL AA Ultra"
-    ],
     "_comment": "Split out of STL AA CAB (Sam, 2026-10-10): the Ultra crew is its own labor dist and performs the Ultra and Shroud Cleaning services specifically. Before this their 6 people's hours were counted nowhere while their budget sat on STL AA CAB, which made that page read over budget. Needs explicit labor_keys: the convention would give 'STL CABIN' from the first three letters. {LOC} still resolves to STL, which is what the Ultra/Shroud COUNTIFS filter on.",
     "services": {
       "ultra": {
