@@ -539,9 +539,11 @@ function renderControls(){
   const ms = DATA.months.map((m,i)=> chip(
     curPeriod.kind==="month" && curPeriod.i===i, "mon",
     `data-kind="month" data-i="${i}"`,
-    // "April 2026" is too wide for twelve of them; the year is on the tier
-    // above and in the title.
-    years.length>1 ? m.label : m.label.replace(/\s+\d{4}$/, ""))).join("");
+    // Three letters each (Sam, 2026-10-20) — twelve full month names push
+    // the row into a second line; the year is on the tier above and in the
+    // title, so it only needs repeating here when the data spans years.
+    m.label.slice(0,3) + (years.length>1 ? ` ${String(m.year).slice(2)}` : "")
+  )).join("");
 
   $("#mchips").innerHTML =
     tier("Year", ys) + '<span class="psep"></span>'
