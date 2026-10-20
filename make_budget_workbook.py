@@ -69,5 +69,12 @@ for st_name, cfg in stations.items():
     ws.column_dimensions["B"].width = 10
     ws.freeze_panes = "A2"
 
+if OUT.exists():
+    raise SystemExit(
+        f"{OUT} already exists. This script rebuilds it from stations.json, "
+        f"which would destroy the sheet renames, the locations added since, "
+        f"the Locations index sheet and the SharePoint customXml parts. The "
+        f"workbook is the authority now, not stations.json — edit it in "
+        f"Excel, or add a sheet by hand.")
 wb.save(OUT)
 print(f"wrote {OUT} ({len(wb.sheetnames)} sheets: {', '.join(wb.sheetnames[:5])}...)")

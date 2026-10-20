@@ -688,13 +688,128 @@ def apply_double_debriefs(tables, closeout):
 NORM = lambda s: re.sub(r"[^a-z0-9]", "", str(s).lower())
 
 
+INDEX_SHEET = "Locations"       # the index sheet, not a location itself
+INDEX_COLS = ("Sheet", "Labor Dists", "Attribution", "Salaried Dists", "Notes")
+
+
+def _parse_attribution(sheet, text, dists, facility):
+    """One Attribution cell -> (shift_window, plain_day_dists).
+
+    The vocabulary is the three rules the build actually has:
+      shift           12h shift-back; an overnight shift credits the day it
+                      started. What a cabin crew working past midnight needs.
+      day             the plain calendar day of the punch. What a day crew
+                      needs, and what every facility takes.
+      HH:MM-HH:MM     a shift window, for the one dist split across two pages
+                      by shift (CLE DAY / CLE NIGHT). A wrapping window is
+                      overnight and keeps the shift-back inside itself.
+      DIST=rule; ...  per dist, for a pooled page whose crews differ.
+    """
+    txt = str(text or "").strip()
+    if not txt:
+        # Deliberately fatal. The convention would answer "shift-back" and be
+        # silently wrong for a day crew — the trap that put DFW-DAL's cabin
+        # hours under a widebody budget. CLAUDE.md's standing instruction was
+        # "ASK SAM FIRST: does the crew work past midnight?"; now the sheet
+        # asks instead (Sam, 2026-10-19).
+        raise SystemExit(
+            f"Service Budgets '{INDEX_SHEET}' sheet: {sheet!r} has no "
+            f"Attribution. Does this crew work past midnight? Put 'shift' if "
+            f"an overnight shift should credit the day it started, 'day' if "
+            f"they finish inside one calendar day"
+            + (" (facility crews take 'day')." if facility else "."))
+
+    def one(rule, who):
+        rule = rule.strip().lower()
+        if rule == "shift":
+            return None, []
+        if rule == "day":
+            return None, list(who)
+        m = re.fullmatch(r"(\d{1,2}):\d{2}\s*[-\u2013]\s*(\d{1,2}):\d{2}", rule)
+        if m:
+            return {"from": int(m.group(1)), "to": int(m.group(2))}, []
+        raise SystemExit(
+            f"Service Budgets '{INDEX_SHEET}' sheet: {sheet!r} has Attribution "
+            f"{rule!r}, which is not 'shift', 'day' or a window like "
+            f"'07:00-19:00'.")
+
+    if "=" in txt:
+        known = {d.upper(): d for d in dists}
+        plain = []
+        for part in re.split(r"[;,]", txt):
+            if not part.strip():
+                continue
+            name, _, rule = part.partition("=")
+            name = name.strip()
+            if name.upper() not in known:
+                raise SystemExit(
+                    f"Service Budgets '{INDEX_SHEET}' sheet: {sheet!r} sets "
+                    f"Attribution for {name!r}, which is not one of its Labor "
+                    f"Dists ({', '.join(dists)}).")
+            win, pl = one(rule, [known[name.upper()]])
+            if win:
+                raise SystemExit(
+                    f"Service Budgets '{INDEX_SHEET}' sheet: {sheet!r} gives "
+                    f"{name!r} a shift window. A window splits ONE dist across "
+                    f"two pages, so it applies to the whole sheet — put it "
+                    f"alone in the cell.")
+            plain += pl
+        return None, plain
+    return one(txt, dists)
+
+
+def _load_location_index(ws):
+    """The Locations sheet: which Labor Dists each location's hours come from
+    and how a punch is credited to a day (Sam, 2026-10-19).
+
+    Those two facts used to live in three places at once — a naming
+    convention (`<CODE> CABIN` / `<CODE> FAC`), stations.json, and
+    station_overrides.json — none of them visible to the person adding a
+    sheet. Now the workbook that decides a location exists also says whose
+    hours it counts, and a sheet the index does not name is an error rather
+    than a guess.
+    """
+    head = [str(ws.cell(row=1, column=c).value or "").strip().lower()
+            for c in range(1, len(INDEX_COLS) + 1)]
+    for want, got in zip(INDEX_COLS[:3], head):
+        if got != want.lower():
+            raise SystemExit(f"Service Budgets '{INDEX_SHEET}' sheet: expected "
+                             f"columns {', '.join(INDEX_COLS)}; got {head}.")
+    idx = {}
+    for r in range(2, ws.max_row + 1):
+        sheet = str(ws.cell(row=r, column=1).value or "").strip()
+        if not sheet:
+            continue
+        dists = [d.strip() for d in
+                 re.split(r"[;,]", str(ws.cell(row=r, column=2).value or ""))
+                 if d.strip()]
+        if not dists:
+            raise SystemExit(f"Service Budgets '{INDEX_SHEET}' sheet: {sheet!r} "
+                             f"names no Labor Dists. There is no safe guess — "
+                             f"its hours would come from nowhere.")
+        sal_txt = str(ws.cell(row=r, column=4).value or "").strip()
+        # Blank means "the same dists"; "none" means this page counts hourly
+        # punches only. CLE DAY is the live case — both CLE pages read CLE AA,
+        # but all of its salaried imputation belongs to CLE NIGHT.
+        salary = ([] if sal_txt.lower() == "none"
+                  else list(dists) if not sal_txt
+                  else [d.strip() for d in re.split(r"[;,]", sal_txt) if d.strip()])
+        idx[sheet] = {"labor_keys": dists, "salary_keys": salary,
+                      "attribution_text": ws.cell(row=r, column=3).value}
+    return idx
+
+
 def load_budget_workbook():
-    """Service Budgets.xlsx: one sheet per location, Service | Budget rows.
-    This workbook is the authority on which locations exist, which services
-    each has, and the hours-per-job rates."""
+    """Service Budgets.xlsx: one sheet per location, Service | Budget rows,
+    plus the "Locations" index sheet. This workbook is the authority on which
+    locations exist, which services each has, the hours-per-job rates, and
+    (since 2026-10-19) which Labor Dists each location counts and how."""
     wb = openpyxl.load_workbook(BUDGETS_DIR / "Service Budgets.xlsx", data_only=True)
-    out = {}
+    out, index = {}, None
     for ws in wb.worksheets:
+        if ws.title.strip().lower() == INDEX_SHEET.lower():
+            index = _load_location_index(ws)
+            continue
         rows = []
         for r in range(2, ws.max_row + 1):
             svc, rate = ws.cell(row=r, column=1).value, ws.cell(row=r, column=2).value
@@ -704,16 +819,36 @@ def load_budget_workbook():
         if rows:
             out[ws.title.strip()] = rows
     wb.close()
-    return out
+    if index is None:
+        print(f"  !! Service Budgets.xlsx has no {INDEX_SHEET!r} sheet — "
+              f"falling back to overrides and the naming convention")
+    else:
+        missing = [s for s in out if s not in index]
+        if missing:
+            raise SystemExit(
+                f"Service Budgets '{INDEX_SHEET}' sheet: no row for "
+                f"{', '.join(sorted(missing))}. Add one saying which Labor "
+                f"Dists the location counts and how its punches are credited "
+                f"to a day — the build will not guess.")
+        extra = [s for s in index if s not in out]
+        if extra:
+            print(f"  !! {INDEX_SHEET} sheet names {', '.join(sorted(extra))}, "
+                  f"which have no budget sheet — ignored")
+    return out, index
 
 
-def merge_budget_config(stations, budgets, catalog, overrides):
+def merge_budget_config(stations, budgets, catalog, overrides, index=None):
     """Build the effective per-station config: the budget workbook decides the
     station list, service list, and rates; specs come from station_overrides
     first, then stations.json for pre-existing station+service pairs, then the
     service catalog templates ({LOC} = first 3 letters of the sheet name).
     Unknown service names fall back to a flat daily budget, with a warning.
-    An override may carry "display" to show the sheet under another name."""
+    An override may carry "display" to show the sheet under another name.
+
+    The workbook's "Locations" index, when present, is the authority on WHOSE
+    hours a location counts and HOW they are credited to a day — it beats the
+    override, stations.json and the naming convention alike, so those two
+    facts live where the person adding a location can see them."""
     merged = {}
     for st_name, rows in budgets.items():
         code = st_name.strip()[:3].upper()
@@ -748,7 +883,10 @@ def merge_budget_config(stations, budgets, catalog, overrides):
             svc["name"], svc["rate"] = svc_name, rate
             services.append(svc)
         fac_only = all(s["kind"] == "fixed" for s in services)
-        if "labor_keys" in ovr:
+        ix = (index or {}).get(st_name)
+        if ix:
+            labor_keys, salary_keys = ix["labor_keys"], ix["salary_keys"]
+        elif "labor_keys" in ovr:
             labor_keys = ovr["labor_keys"]
             salary_keys = ovr.get("salary_keys", labor_keys)
         elif base:
@@ -761,6 +899,18 @@ def merge_budget_config(stations, budgets, catalog, overrides):
         # Name test first so a facility that gains a counted service keeps the
         # right treatment; fac_only covers any future non-"FAC" naming.
         facility = st_name.strip().upper().endswith("FAC") or fac_only
+        if ix:
+            shift_window, plain_day_dists = _parse_attribution(
+                st_name, ix["attribution_text"], labor_keys, facility)
+            # The index is authoritative. A FAC-named sheet that says "shift"
+            # means shift — otherwise the name would silently veto the cell,
+            # which is the kind of invisible rule the index exists to end.
+            # ("day" needs no such care: plain_day_dists already covers it.)
+            if shift_window is None and not plain_day_dists:
+                facility = False
+        else:
+            shift_window = ovr.get("shift_window")
+            plain_day_dists = ovr.get("plain_day_dists")
         # The tab takes the sheet's name unless the override renames it
         # (Sam, 2026-09-28: the "DFW WIDEBODY" sheet shows as "DFW WIDE").
         # Renamed HERE, so everything downstream — debrief gates, manager
@@ -773,8 +923,8 @@ def merge_budget_config(stations, budgets, catalog, overrides):
                                bool(ovr.get("hours_from_first_debrief")),
                            "labor_from_first_debrief":
                                ovr.get("labor_from_first_debrief"),
-                           "shift_window": ovr.get("shift_window"),
-                           "plain_day_dists": ovr.get("plain_day_dists"),
+                           "shift_window": shift_window,
+                           "plain_day_dists": plain_day_dists,
                            # Collapsible service groups: the order they render
                            # in. A station without this renders flat.
                            "group_order": ovr.get("group_order"),
@@ -1577,9 +1727,11 @@ def main():
     catalog = json.loads((HERE / "service_catalog.json").read_text())
     catalog.update(json.loads((HERE / "catalog_extras.json").read_text()))
     overrides = json.loads((HERE / "station_overrides.json").read_text())
-    budgets = load_budget_workbook()
-    print(f"Service Budgets.xlsx: {len(budgets)} location sheets")
-    stations = merge_budget_config(base_stations, budgets, catalog, overrides)
+    budgets, loc_index = load_budget_workbook()
+    print(f"Service Budgets.xlsx: {len(budgets)} location sheets"
+          + (f", {len(loc_index)} indexed" if loc_index else ""))
+    stations = merge_budget_config(base_stations, budgets, catalog, overrides,
+                                   loc_index)
     # Private/MRO locations join as ordinary stations (Sam, 2026-10-11) — one
     # list, every location, whichever way its budget is earned.
     mro_cfgs = _mro_configs()

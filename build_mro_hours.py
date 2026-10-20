@@ -66,8 +66,9 @@ def assert_no_dist_overlap(mro_locs):
     catalog = json.loads((bp.HERE / "service_catalog.json").read_text())
     catalog.update(json.loads((bp.HERE / "catalog_extras.json").read_text()))
     overrides = json.loads((bp.HERE / "station_overrides.json").read_text())
+    budgets, loc_index = bp.load_budget_workbook()
     commercial = bp.merge_budget_config(
-        base_stations, bp.load_budget_workbook(), catalog, overrides)
+        base_stations, budgets, catalog, overrides, loc_index)
     owner = {}
     for st, cfg in commercial.items():
         for k in list(cfg["labor_keys"] or []) + list(cfg["salary_keys"] or []):
