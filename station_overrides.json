@@ -573,8 +573,8 @@
     },
     "hours_from_first_debrief": true
   },
-  "DFW-DAL": {
-    "_comment": "DFW and DAL merged into one page (Aug 2026): the DFW team does much of the DAL work, so budgets and labor are pooled. Sheet name starts 'DFW', so {LOC} resolves to DFW for the Envoy/Frontier/Regional services taken from the catalog; the Ultra and JSX services are pinned explicitly because Ultras must filter Service and the JSX jobs are logged under DAL, not DFW. Deliberately NOT hours_from_first_debrief: DAL alone carried that flag, and applying it here would erase every DFW hour before DAL's first debrief. The DFW WIDEBODY crew was pooled in here for one day and split back out to its own page on 2026-09-28 (Sam) — its dist, its salaried head and its plain-day attribution all moved to the 'DFW WIDEBODY' entry below.",
+  "DFW CABIN": {
+    "_comment": "Split out of the pooled DFW-DAL page on 2026-10-20 (Sam); DAL PRIV is now its own location and took the five JSX services with it. The Ultra and Shroud pins stay: the catalog templates filter Location only, and Ultra_Debriefs holds both job types, so dropping them would count every shroud job as an Ultra as well.",
     "services": {
       "ultras": {
         "kind": "count",
@@ -617,122 +617,12 @@
             ]
           }
         ]
-      },
-      "jsxron": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "DAL"
-              ],
-              [
-                "RON",
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "jsxinteriordetail": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "DAL"
-              ],
-              [
-                "Interior Detail",
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "jsxcarpetextraction": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "DAL"
-              ],
-              [
-                "Carpet Extraction",
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "jsxexteriordetail145": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "DAL"
-              ],
-              [
-                "Exterior Detail 145",
-                1
-              ]
-            ]
-          }
-        ]
-      },
-      "jsxexteriordetailatr": {
-        "kind": "count",
-        "aircraft": false,
-        "specs": [
-          {
-            "fn": "COUNTIFS",
-            "table": "JSX_Debriefs",
-            "sum_col": null,
-            "criteria": [
-              [
-                "Location",
-                "DAL"
-              ],
-              [
-                "Exterior Detail ATR",
-                1
-              ]
-            ]
-          }
-        ]
       }
-    },
-    "labor_from_first_debrief": {
-      "DAL PRIV": [
-        "jsxron",
-        "jsxinteriordetail",
-        "jsxcarpetextraction",
-        "jsxexteriordetail145",
-        "jsxexteriordetailatr"
-      ]
     }
+  },
+  "DAL PRIV": {
+    "_comment": "Split out of the pooled DFW-DAL page on 2026-10-20 (Sam). While pooled, DAL's launch was gated per-dist via DFW-DAL's labor_from_first_debrief, because a station-wide gate there would have erased every DFW hour before DAL's first JSX debrief. Standing alone it takes the ordinary station gate instead. EXPECT THIS PAGE TO READ OVER: 7 JSX debrief rows of budget against one salaried head imputed at 5.71 h/day, with no hourly punches since the gate date. That is a staffing picture, not an over-run.",
+    "hours_from_first_debrief": true
   },
   "CLE DAY": {
     "_comment": "CLE's one labor dist (CLE AA) is split into two crews by punch-in clock hour. DAY takes punches starting 07:00-18:59 local and carries no salaried imputation - the single CLE AA salaried head is assigned to NIGHT. Day shifts get plain calendar-day attribution (a 7 AM start belongs to that day, not the previous one). Budget is the facility share on the CLE DAY sheet; all Ultra and Frontier work belongs to NIGHT."

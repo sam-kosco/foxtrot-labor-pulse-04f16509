@@ -206,7 +206,7 @@ one dist between them:
 
 | keep as-is | why |
 |---|---|
-| `BUR-SNA`, `DFW-DAL`, `FLL`, `TEB-HPN` | pool two dists each |
+| `BUR-SNA`, `FLL`, `TEB-HPN` | pool two dists each (`DFW-DAL` split 2026-10-20) |
 | `CLE DAY`, `CLE NIGHT` | split one dist (`CLE AA`) by shift window |
 
 **`IAH` splits into `IAH CABIN` and `IAH FAC`** — the only page pooling a
