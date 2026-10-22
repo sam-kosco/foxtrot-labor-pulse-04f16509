@@ -101,6 +101,17 @@ def main():
     emp = bp.load_employees()
     hours = bp.load_hours(emp)
     start = max(bp.WINDOW_START, bp.TODAY - timedelta(days=LOOKBACK_DAYS))
+    # The salary split build_pulse.py computed (salary_split): the same
+    # shared hours must land on the calendar as on the pulse page.
+    split_path = bp.HERE / "salary_split.json"
+    if not split_path.exists():
+        raise SystemExit("salary_split.json missing - run build_pulse.py first; "
+                         "without it this feed would disagree with the pulse.")
+    raw = json.loads(split_path.read_text())
+    split = {e: {bp.date.fromisoformat(d) for d in ds}
+             for e, ds in raw["split"].items()}
+    split_extra = {st: {bp.date.fromisoformat(d): h for d, h in v.items()}
+                   for st, v in raw["extra"].items()}
 
     series = {loc: {} for loc in mro}
     y, m = start.year, start.month
@@ -113,8 +124,9 @@ def main():
                               or "plain").strip().lower()
             cfg = {"labor_keys": mc["dists"],
                    "facility": attribution != "shift"}
-            hourly, inc_n, sal, worked = bp.worked_hours(
-                cfg, hsel_shift, hsel_plain, emp, y, m, ndays)
+            hourly, inc_n, sal, worked, split_h = bp.worked_hours(
+                cfg, hsel_shift, hsel_plain, emp, y, m, ndays,
+                split=split, extra=split_extra.get(loc))
             for i in range(ndays):
                 d = bp.date(y, m, i + 1)
                 if start <= d <= bp.TODAY:
@@ -126,6 +138,8 @@ def main():
                         # consumer can flag the day.
                         "incomplete_n": inc_n[i],
                         "salary_heads": sal[i],
+                        # shared salaried hours (salary_split), in worked
+                        "salary_split": split_h[i],
                     }
         m += 1
         if m == 13:

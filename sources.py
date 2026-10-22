@@ -44,6 +44,10 @@ SOURCE_FILES = [
     # pay as salary until a later pay period — the pulse counts these people
     # hourly until their Effective date (Sam, 2026-09-23).
     "Definitive Lists/Pay Type Changes.csv",
+    # The labor dists under each manager on the org chart, published hourly by
+    # the Foxtrot Platform (engine/purview.py). A salaried manager over 2+
+    # pulse pages has their 40 h/week split across them (Sam, 2026-10-21).
+    "Definitive Lists/Salaried Purview.csv",
 ]
 
 # Whole FOLDERS to mirror, because their contents change as locations are

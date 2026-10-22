@@ -158,6 +158,8 @@ select:focus{outline:none;border-color:var(--orange)}
         Service Budgets card. Facility budgets are a flat daily allowance.</p>
         <p><b>Worked Hours</b> = hours punched in Paylocity by hourly employees assigned to
         this station, plus 5.71&nbsp;h/day (40&nbsp;h &divide; 7) for each salaried employee.
+        A salaried manager over several locations has those hours shared across them,
+        in proportion to each location&rsquo;s average daily budget over the previous 30 days.
         Hover or tap any Worked Hours number for its breakdown. Overnight shifts count toward
         the day the shift started. Holiday pay is excluded.</p>
         <p>An <b>*</b> means the number is affected by data that isn&rsquo;t in
@@ -609,11 +611,13 @@ function showTip(el){
       ${(S.budget_notes||{})[d]||""}`;
   } else {                                         // worked-hours cell
     const h = S.hourly[d-1], n = S.salary_heads[d-1], sal = n*40/7;
+    const sh = (S.salary_split||[])[d-1] || 0;   // shared managers' hours
     const note = (S.worked_notes||{})[d];
     tip.innerHTML = `<div class="t-hd">Worked hours &middot; ${mon} ${d}</div>
       Hourly punches: <b>${fmt(h)} h</b><br>
       Salaried: ${n} ${n===1?"person":"people"} &times; 5.71 h = <b>${fmt(sal)} h</b>
-      <div class="t-tot">Total ${fmt(h+sal)} h</div>
+      ${sh?`<br>Shared managers: <b>${fmt(sh)} h</b>`:""}
+      <div class="t-tot">Total ${fmt(h+sal+sh)} h</div>
       ${note?`<div class="t-note">* ${note}</div>`:""}`;
   }
   // getBoundingClientRect is in visual px; the zoomed body positions fixed

@@ -7,6 +7,7 @@ pay-type lookup), and the sheet formulas (COUNTIFS service counts, budgeted
 = rate x count + fixed elapsed-day budgets, worked = hourly punches + 40/7
 per active salaried head, weekly averages over elapsed days, variance text).
 """
+import csv
 import json
 import os
 import re
@@ -36,7 +37,18 @@ else:
 # budget. The old 2026-05-01 cutoff was inherited from the Excel workbook's M
 # queries and was never a data limit. (Sam, 2026-10-20.)
 WINDOW_START = date(2026, 4, 1)
-EXCLUDED_TITLES = {"Director", "Regional Director", "Regional Manager II"}
+# Titles that impute no salaried time anywhere. Head of Internal Operations
+# joined 2026-10-21 (Sam): the role sits over every location, and the salary
+# split below would otherwise spread it across the whole company.
+EXCLUDED_TITLES = {"Director", "Regional Director", "Regional Manager II",
+                   "Head of Internal Operations"}
+# The salary split's weight is a page's average daily budget over the days
+# BEFORE the one being split — this many, or fewer when the page went live
+# more recently (see salary_split).
+SPLIT_WINDOW_DAYS = 30
+# The split takes effect on this date; every day before it is counted exactly
+# as before the split existed (Sam, 2026-10-21).
+SPLIT_START = date(2026, 10, 1)
 TODAY = date.today()
 
 
@@ -1035,6 +1047,38 @@ def load_pay_type_changes():
     return out
 
 
+def load_purview():
+    """Employee id -> [(from, to, dists)]: the labor dists under them on the
+    org chart (their own included) and the dates each set applied, from
+    `Definitive Lists/Salaried Purview.csv` — published by the Foxtrot
+    Platform (engine/purview.py), which owns the org chart. `to` is None
+    while a row is current. Only stretches with 2+ dists are listed; on any
+    other date a person's purview is their home dist alone, so an org-chart
+    change only ever reaches the dates after it."""
+    path = DEFINITIVE_DIR / "Salaried Purview.csv"
+    out = {}
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        for r in csv.DictReader(f):
+            dists = [d.strip().upper() for d in
+                     re.split(r"[;,]", r.get("Labor Dists") or "") if d.strip()]
+            frm = (r.get("From") or "").strip()
+            to = (r.get("To") or "").strip()
+            if not dists or not frm:
+                continue
+            out.setdefault(_norm_eid(r.get("Employee Id")), []).append(
+                (date.fromisoformat(frm), date.fromisoformat(to) if to else None,
+                 dists))
+    return out
+
+
+def _purview_on(rows, d):
+    """The dists a person had under them on date d, or None (home only)."""
+    for frm, to, dists in rows or ():
+        if frm <= d and (to is None or d <= to):
+            return dists
+    return None
+
+
 def load_employees():
     e = pd.read_csv(PAYLOCITY / "Basic Employee Info.csv", dtype=str, encoding="cp1252")
     e = e[~e["Job Title"].isin(EXCLUDED_TITLES)].copy()
@@ -1340,10 +1384,16 @@ _NO_LAUNCH_GATE = object()
 
 
 def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
-                 gates=None, launch=_NO_LAUNCH_GATE):
+                 gates=None, launch=_NO_LAUNCH_GATE, split=None, extra=None):
     """Per-day worked hours for one station config in one month: hourly
     punches + open-shift estimates + 40/7 per active salaried head, with
     optional per-dist gates and a station-wide launch gate.
+
+    The salary split (salary_split, Sam 2026-10-21): `split` maps an employee
+    id to the dates their 40/7 is shared across several pages instead of
+    landing on their home dist — they are left out of this page's head count
+    on those dates — and `extra` maps a date to the shared hours this page
+    receives. Both default to nothing, which is the old behaviour.
 
     This is the single calculation contract for worked hours — shared by the
     commercial build (build_month) and build_mro_hours.py. Change it here and
@@ -1351,8 +1401,8 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
 
     cfg keys used: labor_keys, salary_keys (explicit [] = no salaried
     imputation), facility (True = plain calendar-day attribution),
-    shift_window. Returns (hourly, inc_n, sal_counts, worked), lists indexed
-    by day-1. inc_n counts punches still open when the hours file was cut:
+    shift_window. Returns (hourly, inc_n, sal_counts, worked, split_h), lists
+    indexed by day-1; split_h is the shared salaried hours already in worked. inc_n counts punches still open when the hours file was cut:
     they contribute no hours (the pulse does not estimate) and only drive the
     asterisk on the page.
     """
@@ -1406,6 +1456,7 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
             if 1 <= d <= ndays and not gated_out(key, d):
                 inc_n[d - 1] += int(n)
 
+    split = split or {}
     sal_counts = [0] * ndays
     for skey in skeys:
         sal_emp = emp[(emp["pay_type"] == "Salary")
@@ -1417,8 +1468,11 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
                 continue
             cut = date(year, month, dnum)
             sal_counts[i] += sum(
-                1 for ld, sf in zip(sal_emp["last_day"], sal_emp["salary_from"])
-                if ld and ld > cut and (sf is None or cut >= sf))
+                1 for eid, ld, sf in zip(sal_emp["id"], sal_emp["last_day"],
+                                         sal_emp["salary_from"])
+                if ld and ld > cut and (sf is None or cut >= sf)
+                and cut not in split.get(eid, ()))
+    split_h = [float((extra or {}).get(date(year, month, d), 0.0)) for d in days]
     # Pre-launch labor (before this station's first debrief) is
     # implementation/training — zero it out rather than score it.
     if launch is not _NO_LAUNCH_GATE:
@@ -1427,9 +1481,11 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
                 hourly[i] = 0.0
                 inc_n[i] = 0
                 sal_counts[i] = 0
+                split_h[i] = 0.0
 
-    worked = [round(h + n * 40 / 7, 2) for h, n in zip(hourly, sal_counts)]
-    return hourly, inc_n, sal_counts, worked
+    worked = [round(h + n * 40 / 7 + x, 2)
+              for h, n, x in zip(hourly, sal_counts, split_h)]
+    return hourly, inc_n, sal_counts, worked, [round(x, 2) for x in split_h]
 
 
 def attribution_of(cfg):
@@ -1461,8 +1517,257 @@ def attribution_of(cfg):
     return base
 
 
+def _month_tables(year, month, tables):
+    # pre-slice each debrief table to this month. NB: a zero-row table must
+    # keep its columns — `df[[]]` is COLUMN selection in pandas, which
+    # silently drops them (first hit by the brand-new Widebody table,
+    # 2026-09-28), so empty tables short-circuit through head(0).
+    month_tbl = {}
+    for tname, df in tables.items():
+        mask = [d is not None and d.year == year and d.month == month
+                for d in df["date"]]
+        sel = df[mask].copy() if mask else df.head(0).copy()
+        sel["day"] = [d.day for d in sel["date"]]
+        month_tbl[tname] = sel
+
+    return month_tbl
+
+
+def _month_frame(year, month):
+    """(ndays, is_past, cutoff) for a month, exactly as the sheets do it:
+    past month => all days, current month => days strictly before today."""
+    ndays = month_days(year, month)
+    is_current = (year, month) == (TODAY.year, TODAY.month)
+    is_past = date(year, month, 1) < date(TODAY.year, TODAY.month, 1)
+    cutoff = ndays + 1 if is_past else (TODAY.day if is_current else 0)
+    return ndays, is_past, cutoff
+
+
+def station_budget(st_name, cfg, year, month, month_tbl, hours_start):
+    """(svc_rows, budgeted) for one station in one month — the per-service
+    rows and the daily budget hours, launch gate applied. Split out of
+    build_month (2026-10-21) so every month's budgets can be known before any
+    worked hours are: the salary split weights pages by their trailing budget."""
+    ndays, is_past, cutoff = _month_frame(year, month)
+    days = list(range(1, ndays + 1))
+
+    svc_rows = []
+    budgeted = [0.0] * ndays
+    for svc in cfg["services"]:
+        vals = []
+        # Does this service come from the AA feed? Only those days can
+        # be blank purely because AA has not delivered.
+        uses_aa = any(sp["table"] == "AA_Debriefs"
+                      for sp in svc.get("specs", []))
+        starts = service_start(svc)
+        if svc["kind"] == "fixed":
+            daily = dow_daily_rates(svc)
+            for d in days:
+                elapsed_day = is_past or d < cutoff
+                if not elapsed_day or (starts and
+                                       date(year, month, d) < starts):
+                    vals.append(0)
+                    continue
+                v = (daily[date(year, month, d).weekday()] if daily
+                     else svc["rate"])
+                vals.append(round(v or 0, 2))
+        else:
+            for d in days:
+                if starts and date(year, month, d) < starts:
+                    vals.append(0)
+                    continue
+                total = 0
+                for spec in svc["specs"]:
+                    t = month_tbl.get(spec["table"])
+                    if t is None or t.empty:
+                        continue
+                    m = spec_mask(t, spec) & (t["day"] == d)
+                    if spec["fn"] == "SUMIFS":
+                        total += float(t.loc[m, spec["sum_col"]].sum())
+                    else:
+                        total += int(m.sum())
+                vals.append(total)
+        rate = svc.get("rate") or 0
+        # Hours this service contributes, per day. Three ways to earn a
+        # budget: a flat daily allowance, a rate per aircraft serviced,
+        # and — where the work is priced per airframe rather than timed
+        # (NetJets at FLL) — the service's own REVENUE at a fixed
+        # dollars-per-budgeted-hour (Sam, 2026-10-07: $45 = 1 h).
+        #
+        # `hours_from` splits what a row SHOWS from what it EARNS: the
+        # row still counts aircraft serviced, but its hours come from the
+        # money column beside the count. Without it a NetJets row would
+        # need one hours-per-job rate, and there isn't one — a Complete
+        # Exterior is $331 on an EMB-505S and $1,071 on a GL7500.
+        money = svc.get("hours_from")
+        if money:
+            hrs = []
+            for d in days:
+                if starts and date(year, month, d) < starts:
+                    hrs.append(0.0)
+                    continue
+                tot = 0.0
+                for spec in money:
+                    t = month_tbl.get(spec["table"])
+                    if t is None or t.empty:
+                        continue
+                    m = spec_mask(t, spec) & (t["day"] == d)
+                    tot += float(t.loc[m, spec["sum_col"]].sum())
+                hrs.append(round(tot / rate, 2) if rate else 0.0)
+        elif svc["kind"] == "fixed":
+            hrs = [round(v, 2) for v in vals]
+        elif svc["kind"] == "revenue":
+            hrs = [round(v / rate, 2) if rate else 0.0 for v in vals]
+        else:
+            hrs = [round(v * rate, 2) for v in vals]
+        for i, h in enumerate(hrs):
+            budgeted[i] += h
+        svc_rows.append({"name": svc["name"], "kind": svc["kind"],
+                         "rate": rate, "days": vals, "hours": hrs,
+                         "aircraft": svc.get("aircraft", False),
+                         "uses_aa": uses_aa,
+                         "group": svc.get("group"),
+                         "priced": bool(svc.get("hours_from")),
+                         "hidden": bool(svc.get("hidden"))})
+
+    # A gated station is not scored AT ALL before its launch date
+    # (Sam, 2026-10-20). Gating labor alone leaves any flat budget line
+    # stranded against zero hours, which reads as 100% under - the same
+    # error as before, sign flipped. Counted services are already zero
+    # back there (that is what the launch date means), so this only ever
+    # removes a fixed line that was being released regardless.
+    launch_day = hours_start.get(st_name, _NO_LAUNCH_GATE)
+    if cfg.get("hours_from_first_debrief") or cfg.get("scored_from"):
+        for i in range(ndays):
+            if launch_day is None or date(year, month, i + 1) < launch_day:
+                budgeted[i] = 0.0
+                for r in svc_rows:
+                    r["hours"][i] = 0.0
+    return svc_rows, budgeted
+
+
+def month_budgets(year, month, stations, tables, hours_start):
+    """{station: (svc_rows, budgeted)} for one month."""
+    month_tbl = _month_tables(year, month, tables)
+    return {st: station_budget(st, cfg, year, month, month_tbl, hours_start)
+            for st, cfg in stations.items()}
+
+
+def _salary_dists(cfg):
+    """The labor dists whose salaried imputation a page carries — the same
+    rule worked_hours applies (an explicit [] means none)."""
+    if isinstance(cfg.get("salary_keys"), list):
+        return [k.upper() for k in cfg["salary_keys"] if k]
+    return [k.upper() for k in (cfg.get("labor_keys") or [cfg["labor_key"]]) if k]
+
+
+def salary_split(stations, emp, purview, budgets_by_month, hours_start):
+    """Share each multi-location salaried manager's 40/7 h a day across every
+    pulse page under them (Sam, 2026-10-21), instead of landing it all on
+    their home dist's page.
+
+    When: from SPLIT_START (2026-10-01) only; earlier days are untouched.
+
+    Who, ON EACH DAY: an active salaried employee (excluded titles are
+    already out of `emp`) whose org-chart purview that day — the dated rows of
+    `Definitive Lists/Salaried Purview.csv`, published by the platform —
+    reaches 2+ pages through those pages' salaried dists. An org-chart change
+    therefore only reaches the days after it.
+
+    How much each page gets, DAY BY DAY: in proportion to its average daily
+    budget over the SPLIT_WINDOW_DAYS before that day, or over the days since
+    the page went live when that is more recent (an MRO board from its first
+    scheduled job, a gated commercial page from its first debrief). A page not
+    live yet weighs 0. Each day uses only the budgets before it, so a later
+    budget change never reaches back into hours already split. A day on which
+    every one of a person's pages weighs 0 is not split: the person counts at
+    home as before.
+
+    Returns (split, extra, people):
+      split   {employee id: set(dates)} — days their 40/7 is shared
+      extra   {page: {date: hours}}     — shared hours each page receives
+      people  [{name, title, home, pages: {page: today's share, h/week}}]
+    Per-dist launch gates (labor_from_first_debrief) are not consulted — no
+    page uses one today."""
+    daily = {}
+    for (y, m), bud in budgets_by_month.items():
+        for st, (_rows, b) in bud.items():
+            for i, v in enumerate(b):
+                daily.setdefault(st, {})[date(y, m, i + 1)] = v
+    live = {st: (hours_start.get(st)
+                 if cfg.get("hours_from_first_debrief") or cfg.get("scored_from")
+                 else WINDOW_START)
+            for st, cfg in stations.items()}
+    all_days = [WINDOW_START + timedelta(days=i)
+                for i in range((TODAY - WINDOW_START).days + 1)]
+    before = {}                      # page -> {day: sum of budgets before it}
+    for st in stations:
+        acc, ps = 0.0, {}
+        for d in all_days:
+            ps[d] = acc
+            acc += daily.get(st, {}).get(d, 0.0)
+        before[st] = ps
+
+    def weight(st, d):
+        lv = live.get(st)
+        if lv is None:
+            return 0.0
+        lo = max(d - timedelta(days=SPLIT_WINDOW_DAYS), lv, WINDOW_START)
+        if lo >= d:
+            return 0.0
+        return (before[st][d] - before[st][lo]) / (d - lo).days
+
+    dist_pages = {}
+    for st, cfg in stations.items():
+        for k in _salary_dists(cfg):
+            dist_pages.setdefault(k, set()).add(st)
+
+    def pages_of(dists):
+        return sorted(set().union(*(dist_pages.get(x, set()) for x in dists or ())))
+
+    split, extra, people = {}, {}, []
+    sal = emp[emp["pay_type"] == "Salary"]
+    for eid, first, last, title, home, ld, sf in zip(
+            sal["id"], sal["First Name"], sal["Last Name"], sal["Job Title"],
+            sal["labor_dist"], sal["last_day"], sal["salary_from"]):
+        rows = purview.get(_norm_eid(eid))
+        if not rows:
+            continue
+        days = set()
+        for d in all_days:
+            if d < SPLIT_START or not (ld and ld > d and (sf is None or d >= sf)):
+                continue
+            pages = pages_of(_purview_on(rows, d))
+            if len(pages) < 2:
+                continue
+            w = {pg: weight(pg, d) for pg in pages}
+            tot = sum(w.values())
+            if tot <= 0:
+                continue
+            days.add(d)
+            for pg, v in w.items():
+                if v > 0:
+                    extra.setdefault(pg, {})
+                    extra[pg][d] = extra[pg].get(d, 0.0) + 40 / 7 * v / tot
+        if days:
+            split[eid] = days
+        pages = pages_of(_purview_on(rows, TODAY))
+        if len(pages) < 2:
+            continue
+        w = {pg: weight(pg, TODAY) for pg in pages}
+        tot = sum(w.values())
+        people.append({
+            "name": f"{str(first).strip()} {str(last).strip()}",
+            "title": str(title).strip(),
+            "home": str(home).strip().upper(),
+            "pages": {pg: round(40 * v / tot, 1) if tot else 0.0
+                      for pg, v in sorted(w.items(), key=lambda kv: -kv[1])}})
+    people.sort(key=lambda r: r["name"].upper())
+    return split, extra, people
+
+
 def build_month(year, month, stations, tables, hours, emp, closeout, hours_start,
-                labor_gates):
+                labor_gates, budgets=None, split=None, split_extra=None):
     ndays = month_days(year, month)
     is_current = (year, month) == (TODAY.year, TODAY.month)
     is_past = date(year, month, 1) < date(TODAY.year, TODAY.month, 1)
@@ -1480,17 +1785,10 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
         lambda d: d is not None and d.year == year and d.month == month)]
         if len(closeout) else closeout)
 
-    # pre-slice each debrief table to this month. NB: a zero-row table must
-    # keep its columns — `df[[]]` is COLUMN selection in pandas, which
-    # silently drops them (first hit by the brand-new Widebody table,
-    # 2026-09-28), so empty tables short-circuit through head(0).
-    month_tbl = {}
-    for tname, df in tables.items():
-        mask = [d is not None and d.year == year and d.month == month
-                for d in df["date"]]
-        sel = df[mask].copy() if mask else df.head(0).copy()
-        sel["day"] = [d.day for d in sel["date"]]
-        month_tbl[tname] = sel
+    month_tbl = _month_tables(year, month, tables)
+    if budgets is None:
+        budgets = {st: station_budget(st, cfg, year, month, month_tbl, hours_start)
+                   for st, cfg in stations.items()}
 
     def month_slice(col):
         sel = hours[[d.year == year and d.month == month for d in hours[col]]].copy()
@@ -1504,99 +1802,7 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
     for st_name, cfg in stations.items():
         days = list(range(1, ndays + 1))
         code = st_name.strip()[:3].upper()
-
-        svc_rows = []
-        budgeted = [0.0] * ndays
-        for svc in cfg["services"]:
-            vals = []
-            # Does this service come from the AA feed? Only those days can
-            # be blank purely because AA has not delivered.
-            uses_aa = any(sp["table"] == "AA_Debriefs"
-                          for sp in svc.get("specs", []))
-            starts = service_start(svc)
-            if svc["kind"] == "fixed":
-                daily = dow_daily_rates(svc)
-                for d in days:
-                    elapsed_day = is_past or d < cutoff
-                    if not elapsed_day or (starts and
-                                           date(year, month, d) < starts):
-                        vals.append(0)
-                        continue
-                    v = (daily[date(year, month, d).weekday()] if daily
-                         else svc["rate"])
-                    vals.append(round(v or 0, 2))
-            else:
-                for d in days:
-                    if starts and date(year, month, d) < starts:
-                        vals.append(0)
-                        continue
-                    total = 0
-                    for spec in svc["specs"]:
-                        t = month_tbl.get(spec["table"])
-                        if t is None or t.empty:
-                            continue
-                        m = spec_mask(t, spec) & (t["day"] == d)
-                        if spec["fn"] == "SUMIFS":
-                            total += float(t.loc[m, spec["sum_col"]].sum())
-                        else:
-                            total += int(m.sum())
-                    vals.append(total)
-            rate = svc.get("rate") or 0
-            # Hours this service contributes, per day. Three ways to earn a
-            # budget: a flat daily allowance, a rate per aircraft serviced,
-            # and — where the work is priced per airframe rather than timed
-            # (NetJets at FLL) — the service's own REVENUE at a fixed
-            # dollars-per-budgeted-hour (Sam, 2026-10-07: $45 = 1 h).
-            #
-            # `hours_from` splits what a row SHOWS from what it EARNS: the
-            # row still counts aircraft serviced, but its hours come from the
-            # money column beside the count. Without it a NetJets row would
-            # need one hours-per-job rate, and there isn't one — a Complete
-            # Exterior is $331 on an EMB-505S and $1,071 on a GL7500.
-            money = svc.get("hours_from")
-            if money:
-                hrs = []
-                for d in days:
-                    if starts and date(year, month, d) < starts:
-                        hrs.append(0.0)
-                        continue
-                    tot = 0.0
-                    for spec in money:
-                        t = month_tbl.get(spec["table"])
-                        if t is None or t.empty:
-                            continue
-                        m = spec_mask(t, spec) & (t["day"] == d)
-                        tot += float(t.loc[m, spec["sum_col"]].sum())
-                    hrs.append(round(tot / rate, 2) if rate else 0.0)
-            elif svc["kind"] == "fixed":
-                hrs = [round(v, 2) for v in vals]
-            elif svc["kind"] == "revenue":
-                hrs = [round(v / rate, 2) if rate else 0.0 for v in vals]
-            else:
-                hrs = [round(v * rate, 2) for v in vals]
-            for i, h in enumerate(hrs):
-                budgeted[i] += h
-            svc_rows.append({"name": svc["name"], "kind": svc["kind"],
-                             "rate": rate, "days": vals, "hours": hrs,
-                             "aircraft": svc.get("aircraft", False),
-                             "uses_aa": uses_aa,
-                             "group": svc.get("group"),
-                             "priced": bool(svc.get("hours_from")),
-                             "hidden": bool(svc.get("hidden"))})
-
-        # A gated station is not scored AT ALL before its launch date
-        # (Sam, 2026-10-20). Gating labor alone leaves any flat budget line
-        # stranded against zero hours, which reads as 100% under - the same
-        # error as before, sign flipped. Counted services are already zero
-        # back there (that is what the launch date means), so this only ever
-        # removes a fixed line that was being released regardless.
-        launch_day = hours_start.get(st_name, _NO_LAUNCH_GATE)
-        if cfg.get("hours_from_first_debrief") or cfg.get("scored_from"):
-            for i in range(ndays):
-                if launch_day is None or date(year, month, i + 1) < launch_day:
-                    budgeted[i] = 0.0
-                    for r in svc_rows:
-                        r["hours"][i] = 0.0
+        svc_rows, budgeted = budgets[st_name]
 
         # Collapsible groups (Sam, 2026-10-07, for FLL): a station may sort
         # its services under named groups. The GROUP row carries the budget
@@ -1625,10 +1831,11 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
 
         # worked hours: hourly punches + salaried imputation, per day —
         # the shared contract in worked_hours()
-        hourly, inc_n, sal_counts, worked = worked_hours(
+        hourly, inc_n, sal_counts, worked, split_h = worked_hours(
             cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
             gates=labor_gates.get(st_name, {}),
-            launch=hours_start.get(st_name, _NO_LAUNCH_GATE))
+            launch=hours_start.get(st_name, _NO_LAUNCH_GATE),
+            split=split, extra=(split_extra or {}).get(st_name))
 
         # weekly blocks + stats (avg over elapsed days only)
         weeks = []
@@ -1731,6 +1938,9 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
             "worked_notes": worked_notes,
             "budget_notes": budget_notes,
             "salary_heads": sal_counts,
+            # Salaried hours this page carries for managers shared across
+            # several pages (salary_split) — already inside `worked`.
+            "salary_split": split_h,
             "weeks": weeks,
             "mtd": {"budgeted": mtd_b, "worked": mtd_w,
                     "variance": (round(abs(1 - mtd_w / mtd_b) * 100)
@@ -1750,7 +1960,8 @@ def check_sources_present():
              "Location Management.csv": LOCMGMT_DIR, "Service Budgets.xlsx": BUDGETS_DIR,
              "Private and MRO Pulse Locations.xlsx": BUDGETS_DIR,
              "Early Terminations.csv": DEFINITIVE_DIR,
-             "Pay Type Changes.csv": DEFINITIVE_DIR}
+             "Pay Type Changes.csv": DEFINITIVE_DIR,
+             "Salaried Purview.csv": DEFINITIVE_DIR}
     from sources import SOURCE_FOLDERS
     missing = [n for n in SOURCE_NAMES if not (roots.get(n, DEBRIEFS) / n).exists()]
     # A mirrored folder that arrived empty is worse than a missing file: the
@@ -1820,18 +2031,40 @@ def main():
             hours_start[st_name] = datetime.strptime(str(raw), "%Y-%m-%d").date()
             print(f"  {st_name}: not scored before {hours_start[st_name]}")
     labor_gates = labor_gate_dates(stations, tables)
-    months = []
+    month_keys = []
     y, m = WINDOW_START.year, WINDOW_START.month
     while (y, m) <= (TODAY.year, TODAY.month):
-        months.append(build_month(y, m, stations, tables, hours, emp, closeout,
-                                  hours_start, labor_gates))
+        month_keys.append((y, m))
         m += 1
         if m == 13:
             y, m = y + 1, 1
+    # Every month's budgets first: the salary split weights each day by the
+    # budgets BEFORE it, across month boundaries.
+    budgets_by_month = {k: month_budgets(*k, stations, tables, hours_start)
+                        for k in month_keys}
+    split, split_extra, split_people = salary_split(
+        stations, emp, load_purview(), budgets_by_month, hours_start)
+    print(f"salary split: {len(split_people)} manager(s) shared across pages")
+    for pr in split_people:
+        print(f"  {pr['name']} ({pr['title']}, home {pr['home']}): "
+              + ", ".join(f"{pg} {h}" for pg, h in pr["pages"].items())
+              + " h/wk today")
+    # build_mro_hours.py applies the same split to the platform's MRO feed.
+    (HERE / "salary_split.json").write_text(json.dumps({
+        "split": {e: sorted(d.isoformat() for d in ds) for e, ds in split.items()},
+        "extra": {st: {d.isoformat(): round(h, 4) for d, h in v.items()}
+                  for st, v in split_extra.items()}}))
+    months = [build_month(y, m, stations, tables, hours, emp, closeout,
+                          hours_start, labor_gates,
+                          budgets=budgets_by_month[(y, m)],
+                          split=split, split_extra=split_extra)
+              for (y, m) in month_keys]
     data = {
         "generated": datetime.now().strftime("%b %d, %Y %I:%M %p"),
         "months": months,
         "station_names": list(stations.keys()),
+        # Who is shared across pages, and today's weekly shares (salary_split).
+        "salary_split": split_people,
         "managers": load_managers(stations.keys()),
     }
     (HERE / "pulse_data.json").write_text(json.dumps(data))
