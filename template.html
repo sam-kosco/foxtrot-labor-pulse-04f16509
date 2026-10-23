@@ -451,8 +451,17 @@ function render(){
     if (wk.avg_aircraft!=null) stats.push(`<span><span class="lbl">Avg aircraft/day</span> <b>${fmt(wk.avg_aircraft)}</b></span>`);
     stats.push(`<span><span class="lbl">Avg budgeted</span> <b>${fmt(wk.avg_budgeted)} h</b></span>`);
     stats.push(`<span><span class="lbl">Avg worked</span> <b>${fmt(wk.avg_worked)} h</b></span>`);
-    stats.push(wk.variance ? variBadge(wk.variance.pct, wk.variance.dir==="Over Budget")
-                           : '<span class="badge na">no days elapsed</span>');
+    // No variance has two very different causes and they used to print the
+    // same words. avg_budgeted is null only when NO day in the week has
+    // elapsed; it is 0 when the week is over and nothing was budgeted —
+    // which is what a Private/MRO location shows when its board was never
+    // filled in for that week, and calling that "no days elapsed" told Sam
+    // a week in the past had not happened yet (2026-10-23, RFD week 2).
+    stats.push(
+      wk.variance ? variBadge(wk.variance.pct, wk.variance.dir==="Over Budget")
+      : wk.avg_budgeted == null ? '<span class="badge na">no days elapsed</span>'
+      : wk.avg_worked ? '<span class="badge na">no budget scheduled</span>'
+                      : '<span class="badge na">no activity</span>');
     html += `
     <div class="weekcard">
       <div class="scroller"><div class="grid" style="grid-template-columns:${cols}">

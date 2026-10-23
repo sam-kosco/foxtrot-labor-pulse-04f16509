@@ -43,6 +43,7 @@ The page is intentionally uneditable: ops get a link, not the workbook. The repo
   begins 2026-09-14). It applies to counted and fixed services alike. Note a
   fixed budget still only releases on ELAPSED days, so a future start shows all
   zeros until the date arrives - that is not a misconfiguration.
+- **A week with no variance says WHY.** `variance` is null for two unrelated reasons and the page used to print "no days elapsed" for both: a week genuinely in the future (`avg_budgeted` null, no day elapsed yet) and a week that has been and gone with nothing budgeted (`avg_budgeted` 0). The second is what a Private/MRO location shows when its board was never filled in for that week, and labelling it "no days elapsed" told the reader a past week had not happened (Sam, 2026-10-23, RFD MRO week 2 — 26.7 h worked on the Thursday). Now: "no days elapsed" only when none have, "no budget scheduled" when the week elapsed with labor and no budget, "no activity" when neither side has anything.
 - **Asterisks, not tildes.** `worked_notes` / `budget_notes` are
   `{day: sentence}` maps rendered as `*` with a tooltip. The tilde estimate
   marker is gone.
