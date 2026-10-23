@@ -114,7 +114,14 @@ locations are added and which a fixed file list would silently outgrow. Today th
 is `Pulse Sheets/MRO Schedules` — one forecast document per Private/MRO location,
 and where those locations' BUDGETS come from. `fetch_sources.py` lists each folder's
 children, downloads them into a matching subdirectory, and records each file's
-`lastModifiedDateTime`, so editing a forecast triggers a rebuild on its own.
+`lastModifiedDateTime`, and **`check_sources.py` polls those children too**, so
+editing a forecast triggers a rebuild on its own. The poll half was missing until
+2026-10-23: the probe iterated `SOURCE_FILES` only, so a board edit changed nothing
+until some OTHER source moved — usually the next morning's Paylocity file. Sam
+caught it on AFW EMB, whose six retroactively entered October job-days sat
+unpublished for a day while four scheduled polls reported "no change". An added or
+removed child counts as a change too, which is how a new Private/MRO location
+first appears.
 `check_sources_present` fails when a mirrored folder is **absent or empty** — a
 missing file already failed loudly, but an empty folder was worse: the build
 succeeded and published all eight Private/MRO locations at a 0 budget against real
