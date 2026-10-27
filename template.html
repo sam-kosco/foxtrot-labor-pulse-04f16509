@@ -71,7 +71,7 @@ select:focus{outline:none;border-color:var(--orange)}
 .chrow .cell.name{font-weight:400;padding-left:26px;color:var(--mid)}
 .totrow .cell{background:var(--rowtint);font-weight:700;border-top:2px solid var(--line)}
 .totrow .cell.name{color:var(--ink)}
-.wh,.bn{cursor:help;text-decoration:underline dotted var(--orange) 1.5px;text-underline-offset:3px}
+.wh,.bn,.ow{cursor:help;text-decoration:underline dotted var(--orange) 1.5px;text-underline-offset:3px}
 .wkstats{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;
   padding:9px 12px;background:var(--rowtint);border-top:1px solid var(--line);font-size:12.5px}
 .wkstats b{font-variant-numeric:tabular-nums}
@@ -85,6 +85,8 @@ select:focus{outline:none;border-color:var(--orange)}
   font-size:13px;border-bottom:1px solid var(--line)}
 .raterow:last-child{border-bottom:0}
 .raterow b{font-variant-numeric:tabular-nums}
+.acts{display:flex;flex-direction:column;gap:5px;margin-left:auto;align-items:stretch}
+.acts .schedlink{margin-left:0;justify-content:center}
 .schedlink{display:inline-flex;align-items:center;gap:7px;margin-left:auto;
   background:var(--navy);color:#fff;text-decoration:none;font-weight:600;
   font-size:12.5px;padding:8px 13px;border-radius:8px;white-space:nowrap}
@@ -145,7 +147,10 @@ select:focus{outline:none;border-color:var(--orange)}
     <label for="stsel">Station</label>
     <select id="stsel" aria-label="Choose station"></select>
     <div class="mchips" id="mchips" role="tablist" aria-label="Period"></div>
-    <a id="sched" class="schedlink" hidden target="_top"></a>
+    <div class="acts">
+      <a id="sched" class="schedlink" hidden target="_top"></a>
+      <a id="misc" class="schedlink" hidden target="_top"></a>
+    </div>
   </div>
   <div class="kpis" id="kpis"></div>
   <div class="cols">
@@ -342,6 +347,7 @@ function render(){
   // Hide first, show only where it belongs: the overview returns early
   // below, so anything left visible from the previous station persists.
   $("#sched").hidden = true;
+  $("#misc").hidden = true;
   if (curStation === ALL){ renderOverview(); return; }
   $("#rates").style.display = "";
   const months = periodOf();
@@ -360,6 +366,17 @@ function render(){
     sched.title = "Open " + curStation + " on the Private/MRO scheduler";
     sched.hidden = false;
   }
+
+  // Every location can log work that nothing else captures — a job outside
+  // the facility contract, or on a plane with no debrief and no board. The
+  // form lives on the platform because this page is static; it sits under
+  // the forecast link where a location has one (Sam, 2026-10-27).
+  const misc = $("#misc");
+  misc.href = PLATFORM + "#labor/misc/" + encodeURIComponent(curStation);
+  misc.textContent = "＋  Add misc work";
+  misc.title = "Log work at " + curStation + " that no debrief, facility "
+             + "line or forecast board covers";
+  misc.hidden = false;
 
   // KPIs — over the selected period
   const mtd = totalsFor(months, curStation);
@@ -403,6 +420,14 @@ function render(){
       const v = arr[d-1], fut = d>elapsed;
       return `<div class="cell ${fut?"future":(v?"":"zero")}">${fmt(v)}</div>`;
     }).join("");
+    // The Other row is hand-logged work, so each cell can say what it was.
+    // Same floating tooltip the worked-hours cells use.
+    const otherCells = (sv) => days.map(d=>{
+      const v = sv.hours[d-1], fut = d>elapsed;
+      if (!v) return `<div class="cell ${fut?"future":"zero"}">${fmt(v)}</div>`;
+      return `<div class="cell"><span class="ow" tabindex="0"
+        data-d="${d}">${fmt(v)}</span></div>`;
+    }).join("");
     const svcRow = (sv) => {
       const t = sv.kind==="fixed" ? "Flat daily budget"
         : sv.priced
@@ -410,6 +435,11 @@ function render(){
           + "the price of the service on each airframe, at $" + fmt(sv.rate,2)
           + " of revenue per budgeted hour."
         : "Aircraft receiving this service, from debrief forms";
+      if (sv.kind==="misc")
+        return `<div class="grow"><div class="cell name"
+          title="Work logged by hand that no debrief, facility line or
+forecast board covers — hover a number for what it was">${sv.name}</div>${
+          otherCells(sv)}</div>`;
       return `<div class="grow ${sv.group?"chrow":""}"><div class="cell name"
         title="${t}">${sv.name}</div>${valCells(sv.days)}</div>`;
     };
@@ -494,10 +524,13 @@ function render(){
   // Where EVERY service earns at a revenue rate (an MRO location: each row
   // is a scheduled job), listing a rate per job is noise — one line per
   // distinct rate says it all (Sam, 2026-10-11).
-  const allPriced = S.services.length
-    && S.services.every(sv => sv.priced || sv.kind === "revenue");
+  // misc rows are excluded here as well, so logging one job at FLL does not
+  // flip its rates card out of the collapsed "all labor at one rate" form.
+  const _rateable = S.services.filter(sv => sv.kind !== "misc");
+  const allPriced = _rateable.length
+    && _rateable.every(sv => sv.priced || sv.kind === "revenue");
   const byRate = () => {
-    const seen = [...new Set(S.services.map(sv => sv.rate))].sort((a,b)=>a-b);
+    const seen = [...new Set(_rateable.map(sv => sv.rate))].sort((a,b)=>a-b);
     return seen.map(r => {
       const label = seen.length === 1 ? `All ${curStation} labor`
         : (r === Math.max(...seen) ? "Premium services" : "Standard rate");
@@ -514,11 +547,14 @@ function render(){
         <b>$${fmt(priced[0].rate,2)} <span class="unit">of revenue / hour</span></b></div>`;
     return mem.map(rateRow).join("");
   };
+  // The Other row is hand-logged revenue, not a service with a rate — it has
+  // no sensible line here, and the rate behind it is deliberately not shown.
+  const rated = S.services.filter(sv=>sv.kind!=="misc");
   const rates = allPriced ? byRate()
     : (S.groups||[]).length
     ? S.groups.map(g=>`<div class="ratehd">${g.name}</div>` + groupRates(g)).join("")
-      + S.services.filter(sv=>!sv.group).map(rateRow).join("")
-    : S.services.map(rateRow).join("");
+      + rated.filter(sv=>!sv.group).map(rateRow).join("")
+    : rated.map(rateRow).join("");
   $("#rates").innerHTML = `<div class="hd">${curStation} Service Budgets</div>${rates}`;
 }
 
@@ -615,7 +651,17 @@ function showTip(el){
   // Only the single-month day grid has cells to hover, so this is that month.
   const ms = periodOf(), M = ms[ms.length-1], S = M.stations[curStation];
   const d = +el.dataset.d, mon = M.label.split(" ")[0];
-  if (el.classList.contains("bn")) {              // budgeted-hours asterisk
+  if (el.classList.contains("ow")) {              // an Other (misc work) cell
+    const sv = (S.services||[]).find(x=>x.kind==="misc");
+    const items = ((sv&&sv.tips)||{})[d] || [];
+    // Revenue and the description, never the rate the hours came from.
+    tip.innerHTML = `<div class="t-hd">Other &middot; ${mon} ${d}</div>`
+      + items.map(it=>`${it.desc ? it.desc.replace(/[<>]/g,"") : "(no description)"}
+         <br>Revenue <b>$${fmt(it.revenue,2)}</b>${
+         it.days>1?` over ${it.days} days`:""}
+         <div class="t-tot">${fmt(it.hours)} h this day</div>`).join(
+         '<div class="t-note" style="margin-top:6px"></div>');
+  } else if (el.classList.contains("bn")) {       // budgeted-hours asterisk
     tip.innerHTML = `<div class="t-hd">Budgeted hours &middot; ${mon} ${d}</div>
       ${(S.budget_notes||{})[d]||""}`;
   } else {                                         // worked-hours cell
@@ -641,11 +687,11 @@ function showTip(el){
   tip.style.left = x+"px"; tip.style.top = y+"px";
 }
 function hideTip(){ tip.style.display="none"; }
-document.addEventListener("mouseover", e=>{ const w=e.target.closest(".wh,.bn"); if(w) showTip(w); });
-document.addEventListener("mouseout",  e=>{ if(e.target.closest(".wh,.bn")) hideTip(); });
-document.addEventListener("focusin",   e=>{ const w=e.target.closest(".wh,.bn"); if(w) showTip(w); });
-document.addEventListener("focusout",  e=>{ if(e.target.closest(".wh,.bn")) hideTip(); });
-document.addEventListener("click", e=>{ const w=e.target.closest(".wh,.bn");
+document.addEventListener("mouseover", e=>{ const w=e.target.closest(".wh,.bn,.ow"); if(w) showTip(w); });
+document.addEventListener("mouseout",  e=>{ if(e.target.closest(".wh,.bn,.ow")) hideTip(); });
+document.addEventListener("focusin",   e=>{ const w=e.target.closest(".wh,.bn,.ow"); if(w) showTip(w); });
+document.addEventListener("focusout",  e=>{ if(e.target.closest(".wh,.bn,.ow")) hideTip(); });
+document.addEventListener("click", e=>{ const w=e.target.closest(".wh,.bn,.ow");
   if(w){ showTip(w); e.stopPropagation(); } else hideTip(); });
 window.addEventListener("scroll", hideTip, true);
 </script>

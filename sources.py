@@ -32,6 +32,10 @@ SOURCE_FILES = [
     "Power Flows/Debriefs/Closeout Compare.xlsx",
     "Power BI Data Sources/Location Management.csv",
     "Pulse Sheets/Service Budgets.xlsx",
+    # Work logged by hand that no debrief, facility line or MRO board
+    # covers — the platform's Add Misc Work form writes it, and it becomes
+    # the "Other" row on a location's page.
+    "Pulse Sheets/Misc Work.json",
     # Private/MRO pulse locations (one sheet per location; the platform's
     # Private/MRO Labor calendar reads config from it, this repo reads each
     # sheet's Labor Distribution to publish mro_hours.json).

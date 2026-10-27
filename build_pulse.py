@@ -353,6 +353,83 @@ MRO_WORKBOOK = "Private and MRO Pulse Locations.xlsx"
 MRO_SCHEDULES = "MRO Schedules"
 
 
+MISC_WORK = "Misc Work.json"
+# One flat rate for miscellaneous work at every location (Sam, 2026-10-27),
+# and deliberately NOT shown anywhere on the page. Per-location goal rates
+# ARE derivable — invoiced revenue over budgeted hours holds to within 7%
+# for most locations — but they range from $29 to $87, so publishing any one
+# number would be wrong for most of them. Per-location rates can replace
+# this later without the page changing.
+MISC_RATE = 44.0
+
+
+def load_misc_work():
+    """Work logged by hand that no debrief, facility line or MRO board covers.
+
+    Written by the platform's Add Misc Work form: one entry per job, with the
+    dates it ran and the revenue it earned.
+    """
+    path = BUDGETS_DIR / MISC_WORK
+    if not path.exists():
+        print(f"  !! {MISC_WORK} missing — no Other rows")
+        return []
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError as e:
+        raise SystemExit(f"{MISC_WORK} is not valid JSON: {e}")
+    entries = doc.get("entries", []) if isinstance(doc, dict) else doc
+    out = []
+    for e in entries:
+        try:
+            a = date.fromisoformat(str(e["start"]))
+            b = date.fromisoformat(str(e["end"]))
+            rev = float(e["revenue"])
+        except (KeyError, TypeError, ValueError):
+            print(f"  !! {MISC_WORK}: skipping unreadable entry {e!r}")
+            continue
+        if b < a:
+            a, b = b, a
+        out.append({"location": str(e.get("location") or "").strip(),
+                    "description": str(e.get("description") or "").strip(),
+                    "start": a, "end": b, "revenue": rev})
+    if out:
+        print(f"  misc work: {len(out)} entry(ies) across "
+              f"{len({e['location'] for e in out})} location(s)")
+    return out
+
+
+def misc_row(entries, st_name, year, month, ndays, is_past, cutoff):
+    """The "Other" service row for one station-month, or None.
+
+    Each entry's revenue is spread evenly over the days it ran — the form
+    asks for a range, not a per-day split — so a job lands on the days it was
+    worked instead of all on one date. Only elapsed days release, the rule
+    the flat facility lines already follow.
+    """
+    hours, tips = [0.0] * ndays, {}
+    for e in entries:
+        if e["location"] != st_name:
+            continue
+        span = (e["end"] - e["start"]).days + 1
+        per = (e["revenue"] / MISC_RATE) / span
+        for i in range(span):
+            d = e["start"] + timedelta(days=i)
+            if d.year != year or d.month != month:
+                continue
+            if not (is_past or d.day < cutoff):
+                continue
+            hours[d.day - 1] += per
+            tips.setdefault(d.day, []).append(
+                {"desc": e["description"], "revenue": round(e["revenue"], 2),
+                 "days": span, "hours": round(per, 2)})
+    if not any(hours):
+        return None
+    hrs = [round(h, 2) for h in hours]
+    return {"name": "Other", "kind": "misc", "rate": 0, "days": hrs,
+            "hours": hrs, "aircraft": False, "uses_aa": False, "group": None,
+            "priced": False, "hidden": False, "tips": tips}
+
+
 def _mro_configs():
     """One sheet per location; A/B is a key/value block read until the first
     blank key (same contract engine/mro.py reads)."""
@@ -1543,7 +1620,8 @@ def _month_frame(year, month):
     return ndays, is_past, cutoff
 
 
-def station_budget(st_name, cfg, year, month, month_tbl, hours_start):
+def station_budget(st_name, cfg, year, month, month_tbl, hours_start,
+                   misc=()):
     """(svc_rows, budgeted) for one station in one month — the per-service
     rows and the daily budget hours, launch gate applied. Split out of
     build_month (2026-10-21) so every month's budgets can be known before any
@@ -1630,6 +1708,15 @@ def station_budget(st_name, cfg, year, month, month_tbl, hours_start):
                          "priced": bool(svc.get("hours_from")),
                          "hidden": bool(svc.get("hidden"))})
 
+    # Hand-logged work that nothing else covers. Added BEFORE the gate
+    # below on purpose: a location that is not being scored yet should not
+    # start carrying budget because someone logged a job against it.
+    other = misc_row(misc, st_name, year, month, ndays, is_past, cutoff)
+    if other:
+        svc_rows.append(other)
+        for i, h in enumerate(other["hours"]):
+            budgeted[i] += h
+
     # A gated station is not scored AT ALL before its launch date
     # (Sam, 2026-10-20). Gating labor alone leaves any flat budget line
     # stranded against zero hours, which reads as 100% under - the same
@@ -1646,10 +1733,11 @@ def station_budget(st_name, cfg, year, month, month_tbl, hours_start):
     return svc_rows, budgeted
 
 
-def month_budgets(year, month, stations, tables, hours_start):
+def month_budgets(year, month, stations, tables, hours_start, misc=()):
     """{station: (svc_rows, budgeted)} for one month."""
     month_tbl = _month_tables(year, month, tables)
-    return {st: station_budget(st, cfg, year, month, month_tbl, hours_start)
+    return {st: station_budget(st, cfg, year, month, month_tbl, hours_start,
+                               misc)
             for st, cfg in stations.items()}
 
 
@@ -1767,7 +1855,8 @@ def salary_split(stations, emp, purview, budgets_by_month, hours_start):
 
 
 def build_month(year, month, stations, tables, hours, emp, closeout, hours_start,
-                labor_gates, budgets=None, split=None, split_extra=None):
+                labor_gates, budgets=None, split=None, split_extra=None,
+                misc=()):
     ndays = month_days(year, month)
     is_current = (year, month) == (TODAY.year, TODAY.month)
     is_past = date(year, month, 1) < date(TODAY.year, TODAY.month, 1)
@@ -1787,7 +1876,8 @@ def build_month(year, month, stations, tables, hours, emp, closeout, hours_start
 
     month_tbl = _month_tables(year, month, tables)
     if budgets is None:
-        budgets = {st: station_budget(st, cfg, year, month, month_tbl, hours_start)
+        budgets = {st: station_budget(st, cfg, year, month, month_tbl,
+                                      hours_start, misc)
                    for st, cfg in stations.items()}
 
     def month_slice(col):
@@ -1959,6 +2049,7 @@ def check_sources_present():
     roots = {"This Years Hours.csv": PAYLOCITY, "Basic Employee Info.csv": PAYLOCITY,
              "Location Management.csv": LOCMGMT_DIR, "Service Budgets.xlsx": BUDGETS_DIR,
              "Private and MRO Pulse Locations.xlsx": BUDGETS_DIR,
+             "Misc Work.json": BUDGETS_DIR,
              "Early Terminations.csv": DEFINITIVE_DIR,
              "Pay Type Changes.csv": DEFINITIVE_DIR,
              "Salaried Purview.csv": DEFINITIVE_DIR}
@@ -2024,6 +2115,7 @@ def main():
 
     closeout = load_closeout()
     apply_double_debriefs(tables, closeout)
+    misc = load_misc_work()
     hours_start = first_debrief_dates(stations, tables)
     for st_name, cfg in stations.items():
         raw = cfg.get("scored_from")
@@ -2040,7 +2132,7 @@ def main():
             y, m = y + 1, 1
     # Every month's budgets first: the salary split weights each day by the
     # budgets BEFORE it, across month boundaries.
-    budgets_by_month = {k: month_budgets(*k, stations, tables, hours_start)
+    budgets_by_month = {k: month_budgets(*k, stations, tables, hours_start, misc)
                         for k in month_keys}
     split, split_extra, split_people = salary_split(
         stations, emp, load_purview(), budgets_by_month, hours_start)
