@@ -389,8 +389,12 @@ def load_misc_work():
             continue
         if b < a:
             a, b = b, a
+        # Name is what the row's tooltip leads with; entries logged before
+        # names existed (2026-10-27) fall back to their description.
+        nm = str(e.get("name") or "").strip()
+        desc = str(e.get("description") or "").strip()
         out.append({"location": str(e.get("location") or "").strip(),
-                    "description": str(e.get("description") or "").strip(),
+                    "name": nm or desc or "Misc work", "description": desc,
                     "start": a, "end": b, "revenue": rev})
     if out:
         print(f"  misc work: {len(out)} entry(ies) across "
@@ -399,7 +403,7 @@ def load_misc_work():
 
 
 def misc_row(entries, st_name, year, month, ndays, is_past, cutoff):
-    """The "Other" service row for one station-month, or None.
+    """The "Misc." service row for one station-month, or None.
 
     Each entry's revenue is spread evenly over the days it ran — the form
     asks for a range, not a per-day split — so a job lands on the days it was
@@ -420,12 +424,13 @@ def misc_row(entries, st_name, year, month, ndays, is_past, cutoff):
                 continue
             hours[d.day - 1] += per
             tips.setdefault(d.day, []).append(
-                {"desc": e["description"], "revenue": round(e["revenue"], 2),
+                {"name": e["name"], "desc": e["description"],
+                 "revenue": round(e["revenue"], 2),
                  "days": span, "hours": round(per, 2)})
     if not any(hours):
         return None
     hrs = [round(h, 2) for h in hours]
-    return {"name": "Other", "kind": "misc", "rate": 0, "days": hrs,
+    return {"name": "Misc.", "kind": "misc", "rate": 0, "days": hrs,
             "hours": hrs, "aircraft": False, "uses_aa": False, "group": None,
             "priced": False, "hidden": False, "tips": tips}
 

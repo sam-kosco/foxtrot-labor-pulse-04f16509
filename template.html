@@ -655,8 +655,10 @@ function showTip(el){
     const sv = (S.services||[]).find(x=>x.kind==="misc");
     const items = ((sv&&sv.tips)||{})[d] || [];
     // Revenue and the description, never the rate the hours came from.
-    tip.innerHTML = `<div class="t-hd">Other &middot; ${mon} ${d}</div>`
-      + items.map(it=>`${it.desc ? it.desc.replace(/[<>]/g,"") : "(no description)"}
+    const esc = (t) => String(t||"").replace(/[<>]/g,"");
+    tip.innerHTML = `<div class="t-hd">Misc. &middot; ${mon} ${d}</div>`
+      + items.map(it=>`<b>${esc(it.name)}</b>${
+         it.desc && it.desc !== it.name ? `<br>${esc(it.desc)}` : ""}
          <br>Revenue <b>$${fmt(it.revenue,2)}</b>${
          it.days>1?` over ${it.days} days`:""}
          <div class="t-tot">${fmt(it.hours)} h this day</div>`).join(
