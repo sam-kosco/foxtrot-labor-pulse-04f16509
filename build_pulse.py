@@ -1302,6 +1302,41 @@ def load_hours(emp):
 
 # ---------------------------------------------------------------- compute
 
+def spec_by_day(month_tbl, specs, sum_col_from_spec=False):
+    """{day: value} for a list of COUNTIFS/SUMIFS specs over one month.
+
+    The mask a spec describes does NOT depend on the day, but this used to
+    be evaluated inside the per-day loop — `spec_mask(t, spec) & (t.day==d)`
+    — so every service re-normalised its whole month table once per day of
+    the month (`.astype(str).str.strip().str.upper()` over every criterion,
+    31 times for one answer). That was 77% of the build. Computing the mask
+    once per spec and grouping by day is the same arithmetic in one pass.
+
+    Accumulation order matches the old loop exactly, so a COUNTIFS-only
+    service still yields ints and a service mixing in a SUMIFS still yields
+    floats.
+    """
+    out = {}
+    for spec in specs:
+        t = month_tbl.get(spec["table"])
+        if t is None or t.empty:
+            continue
+        sel = t.loc[spec_mask(t, spec)]
+        if sel.empty:
+            continue
+        col = spec["sum_col"] if (sum_col_from_spec or spec["fn"] == "SUMIFS") \
+            else None
+        if col:
+            g = sel.groupby("day")[col].sum()
+            for day, v in g.items():
+                out[int(day)] = out.get(int(day), 0) + float(v)
+        else:
+            g = sel.groupby("day").size()
+            for day, v in g.items():
+                out[int(day)] = out.get(int(day), 0) + int(v)
+    return out
+
+
 def spec_mask(df, spec):
     m = pd.Series(True, index=df.index)
     for col, val in spec["criteria"]:
@@ -1661,21 +1696,12 @@ def station_budget(st_name, cfg, year, month, month_tbl, hours_start,
                      else svc["rate"])
                 vals.append(round(v or 0, 2))
         else:
+            by_day = spec_by_day(month_tbl, svc.get("specs") or [])
             for d in days:
                 if starts and date(year, month, d) < starts:
                     vals.append(0)
                     continue
-                total = 0
-                for spec in svc["specs"]:
-                    t = month_tbl.get(spec["table"])
-                    if t is None or t.empty:
-                        continue
-                    m = spec_mask(t, spec) & (t["day"] == d)
-                    if spec["fn"] == "SUMIFS":
-                        total += float(t.loc[m, spec["sum_col"]].sum())
-                    else:
-                        total += int(m.sum())
-                vals.append(total)
+                vals.append(by_day.get(d, 0))
         rate = svc.get("rate") or 0
         # Hours this service contributes, per day. Three ways to earn a
         # budget: a flat daily allowance, a rate per aircraft serviced,
@@ -1690,18 +1716,14 @@ def station_budget(st_name, cfg, year, month, month_tbl, hours_start,
         # Exterior is $331 on an EMB-505S and $1,071 on a GL7500.
         money = svc.get("hours_from")
         if money:
+            money_by_day = spec_by_day(month_tbl, money,
+                                       sum_col_from_spec=True)
             hrs = []
             for d in days:
                 if starts and date(year, month, d) < starts:
                     hrs.append(0.0)
                     continue
-                tot = 0.0
-                for spec in money:
-                    t = month_tbl.get(spec["table"])
-                    if t is None or t.empty:
-                        continue
-                    m = spec_mask(t, spec) & (t["day"] == d)
-                    tot += float(t.loc[m, spec["sum_col"]].sum())
+                tot = float(money_by_day.get(d, 0.0))
                 hrs.append(round(tot / rate, 2) if rate else 0.0)
         elif svc["kind"] == "fixed":
             hrs = [round(v, 2) for v in vals]

@@ -12,6 +12,22 @@ The page is intentionally uneditable: ops get a link, not the workbook. The repo
 3. `build_pulse.py` reproduces the workbook's full calculation chain from those sources (the workbook itself is never read) and renders `index.html` from `template.html` with the data embedded.
 4. The workflow commits `index.html` + `pulse_data.json`; GitHub Pages serves it.
 
+## Build cost (measured 2026-10-27)
+
+A forced CI refresh was 253s: fetch 30s, **build 141s**, Pages verify 61s,
+the rest setup. Profiling the build found `station_budget` was **77% of it**
+— `spec_mask(t, spec) & (t["day"] == d)` sat INSIDE the per-day loop, so every
+service re-normalised its whole month table (`.astype(str).str.strip().str.upper()`
+per criterion) once for each day of the month to get one number. The mask does
+not depend on the day. `spec_by_day()` computes it once per spec and groups by
+day: **station_budget 73.3s -> 5.0s (14.7x)**, local build 95s -> 28s, and the
+output is numerically identical — every hour, total and variance — verified by
+diffing a full build against the previous one.
+
+What is left is mostly unavoidable: the 12 debrief loaders parsing their
+workbooks (~21s) and `worked_hours` (~8s). The Pages verify step is dead wait
+on GitHub serving the commit, not our code.
+
 ## Calculation notes
 
 - **Worked Hours** = hourly punched hours + 40/7 h per active salaried employee in the station's labor dist ("Not Defined" labor dist repaired from the employee master). Directors/Regional Managers are excluded, matching the workbook query. (Exactly: the titles Director, Regional Director, Regional Manager II and — since 2026-10-21 — Head of Internal Operations; `EXCLUDED_TITLES`. RM Is are counted.)
