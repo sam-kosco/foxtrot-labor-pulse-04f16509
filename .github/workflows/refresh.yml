@@ -70,6 +70,20 @@ jobs:
       - name: Install dependencies
         run: pip install openpyxl pandas requests
 
+      # The sources the last run downloaded. Most of them have not moved —
+      # a misc-work entry changes ONE small JSON — so with the bytes already
+      # here, fetch_sources only pulls what Graph says is newer than the
+      # committed sources_meta.json baseline. A rolling key: the unique key
+      # never hits, so every run saves a fresh cache, and restore-keys picks
+      # up the newest one. A cache miss simply downloads everything, which is
+      # the old behaviour.
+      - name: Restore the source cache
+        uses: actions/cache@v4
+        with:
+          path: sources
+          key: pulse-sources-${{ github.run_id }}
+          restore-keys: pulse-sources-
+
       - name: Fetch sources from SharePoint
         env:
           TENANT_ID:     ${{ secrets.TENANT_ID }}

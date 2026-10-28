@@ -22,6 +22,18 @@ CLIENT_SECRET = os.environ["CLIENT_SECRET"]
 DRIVE_ID = "b!_bzXaIx86kOufgJN3ih-BaDIDthKYuxJkJtLi1Bm5irGjCEnK-VHSpBRRm3_SDKU"
 
 OUT = Path(__file__).parent / "sources"
+# The stamps of the bytes CURRENTLY IN ./sources — written beside them by
+# whichever run produced them, and restored with them from the runner cache.
+# A file whose Graph lastModifiedDateTime still matches has not moved, so
+# there is nothing to download. The poll (check_sources.py) has always
+# trusted this exact comparison to decide whether to build at all; this
+# makes the FETCH trust it too.
+#
+# Deliberately NOT the committed sources_meta.json at the repo root: that
+# describes the last BUILD, while the cache may have come from a different
+# run. Reading the stamps that travelled WITH the bytes is the only version
+# of this that cannot skip a download over a stale file.
+BASELINE = OUT / "sources_meta.json"
 
 
 def get_token():
@@ -46,6 +58,18 @@ def main():
     print("Token acquired.")
     failed, meta = [], {}
     hdrs = {"Authorization": f"Bearer {token}"}
+    try:
+        prev = json.loads(BASELINE.read_text())
+    except (OSError, ValueError):
+        prev = {}        # no baseline (or unreadable) = fetch everything
+        print("no committed baseline — downloading every source")
+    kept = 0
+
+    def unchanged(key, stamp):
+        """Is the cached copy already this exact version?"""
+        dest = OUT / key
+        return bool(stamp) and prev.get(key) == stamp \
+            and dest.exists() and dest.stat().st_size > 0
     for path in FILES:
         base = (f"https://graph.microsoft.com/v1.0/drives/{DRIVE_ID}"
                 f"/root:/{requests.utils.quote(path)}")
@@ -53,6 +77,9 @@ def main():
         m = requests.get(base + "?$select=lastModifiedDateTime", headers=hdrs, timeout=30)
         if m.status_code == 200:
             meta[name] = m.json().get("lastModifiedDateTime")
+        if unchanged(name, meta.get(name)):
+            kept += 1
+            continue
         ok = False
         for attempt in range(1, 4):
             try:
@@ -87,18 +114,34 @@ def main():
         kids = [c for c in r.json().get("value", [])
                 if c["name"].lower().endswith(".json")]
         for c in kids:
+            key = f"{dest.name}/{c['name']}"
+            stamp = c.get("lastModifiedDateTime")
+            if unchanged(key, stamp):
+                meta[key] = stamp
+                kept += 1
+                continue
             cu = (f"https://graph.microsoft.com/v1.0/drives/{DRIVE_ID}/root:/"
                   f"{requests.utils.quote(folder + '/' + c['name'])}:/content")
             cr = requests.get(cu, headers=hdrs, timeout=120)
             if cr.status_code == 200:
                 (dest / c["name"]).write_bytes(cr.content)
-                meta[f"{dest.name}/{c['name']}"] = c.get("lastModifiedDateTime")
+                meta[key] = stamp
             else:
                 failed.append(f"{folder}/{c['name']} (HTTP {cr.status_code})")
+        # A child the folder no longer holds must not linger in the cache:
+        # the build reads the whole directory, so a deleted location would
+        # keep publishing from a stale file.
+        live = {c["name"] for c in kids}
+        for old_file in dest.glob("*.json"):
+            if old_file.name not in live:
+                old_file.unlink()
+                print(f"  gone {folder}/{old_file.name} — removed from cache")
         print(f"  ok  {folder}: {len(kids)} file(s)")
         if not kids:
             failed.append(f"{folder} (empty — Private/MRO budgets would be 0)")
 
+    if kept:
+        print(f"  {kept} source(s) unchanged — served from cache, not downloaded")
     (OUT / "sources_meta.json").write_text(json.dumps(meta, indent=1))
     if failed:
         sys.exit(f"aborting: {len(failed)} downloads failed {failed}")

@@ -24,6 +24,21 @@ day: **station_budget 73.3s -> 5.0s (14.7x)**, local build 95s -> 28s, and the
 output is numerically identical — every hour, total and variance — verified by
 diffing a full build against the previous one.
 
+**The fetch only downloads what moved** (Sam, 2026-10-27 — "you don't need
+to fetch at all when a misc is added"). It always asked Graph for each
+file's lastModifiedDateTime and then downloaded all 22 regardless, including
+a 15 MB hours CSV, to pick up a one-line change in a small JSON. The runner
+now caches `sources/` between runs (rolling key, restore-keys prefix) and
+`fetch_sources` skips any file whose stamp still matches — the same
+comparison the poll has always trusted to decide whether to build at all.
+The baseline it reads is `sources/sources_meta.json`, the stamps that
+travelled WITH the cached bytes, NOT the committed one at the repo root:
+that describes the last BUILD, and the cache may have come from another run,
+so comparing against it could skip a download over a stale file. A cache
+miss, a missing stamp or a zero-byte cached file all fall back to
+downloading, and a folder child that no longer exists upstream is deleted
+from the cache rather than left to publish a dead location.
+
 What is left is mostly unavoidable: the 12 debrief loaders parsing their
 workbooks (~21s) and `worked_hours` (~8s). The Pages verify step is dead wait
 on GitHub serving the commit, not our code.
