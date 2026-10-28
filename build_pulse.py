@@ -402,13 +402,21 @@ def load_misc_work():
     return out
 
 
-def misc_row(entries, st_name, year, month, ndays, is_past, cutoff):
+def misc_row(entries, st_name, year, month, ndays):
     """The "Misc." service row for one station-month, or None.
 
     Each entry's revenue is spread evenly over the days it ran — the form
     asks for a range, not a per-day split — so a job lands on the days it was
-    worked instead of all on one date. Only elapsed days release, the rule
-    the flat facility lines already follow.
+    worked instead of all on one date.
+
+    Days are NOT gated on being elapsed (Sam, 2026-10-27, logging BNA FAC
+    work dated today through two days out and seeing no row at all). The
+    gate was copied from the flat facility lines, where it belongs: those
+    are a forward allowance that must not be credited before the day
+    happens. Misc work is the opposite — a record of work on dates somebody
+    typed — so it lands where it is dated, the way a debrief-driven service
+    does, and the way the Private/MRO board already draws the same entries.
+    The month total still only sums elapsed days, so nothing is inflated.
     """
     hours, tips = [0.0] * ndays, {}
     for e in entries:
@@ -419,8 +427,6 @@ def misc_row(entries, st_name, year, month, ndays, is_past, cutoff):
         for i in range(span):
             d = e["start"] + timedelta(days=i)
             if d.year != year or d.month != month:
-                continue
-            if not (is_past or d.day < cutoff):
                 continue
             hours[d.day - 1] += per
             tips.setdefault(d.day, []).append(
@@ -1716,7 +1722,7 @@ def station_budget(st_name, cfg, year, month, month_tbl, hours_start,
     # Hand-logged work that nothing else covers. Added BEFORE the gate
     # below on purpose: a location that is not being scored yet should not
     # start carrying budget because someone logged a job against it.
-    other = misc_row(misc, st_name, year, month, ndays, is_past, cutoff)
+    other = misc_row(misc, st_name, year, month, ndays)
     if other:
         svc_rows.append(other)
         for i, h in enumerate(other["hours"]):
