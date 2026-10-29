@@ -416,5 +416,15 @@
         ]
       }
     ]
+  },
+  "aafacilitybudget": {
+    "name": "AA Facility Budget",
+    "kind": "fixed",
+    "aircraft": false
+  },
+  "breezefacilitybudget": {
+    "name": "Breeze Facility Budget",
+    "kind": "fixed",
+    "aircraft": false
   }
 }
