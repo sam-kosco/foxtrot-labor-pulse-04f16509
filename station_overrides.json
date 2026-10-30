@@ -1693,5 +1693,15 @@
   "BDL CABIN": {
     "hours_from_first_debrief": true,
     "_comment": "Breeze is BDL's only counted work and its debriefs start 2026-06-15. Before that the page carried a facility line and one salaried head, reading 138% over on nothing."
+  },
+  "PVD AA CAB": {
+    "_comment": "PVD's single Facility Budget was split per customer on 2026-10-28 (Sam): AA Facility Budget 8 h/day, Breeze Facility Budget 4 h/day. The Breeze janitorial contract starts 2026-10-29, so its line contributes nothing before then rather than being back-applied over the whole window. NB a fixed budget only releases on ELAPSED days, so the day it starts still reads 0 until that day has passed.",
+    "services": {
+      "breezefacilitybudget": {
+        "kind": "fixed",
+        "aircraft": false,
+        "starts": "2026-10-29"
+      }
+    }
   }
 }
