@@ -579,7 +579,15 @@ def mro_stations(cfgs, jobs):
         # compares upper-cased: two rows for "PAXX DOOR" and "PAXX Door" would
         # each match the other's jobs and double-count them. Hand-typed job
         # names collide like this routinely — TUS MHI carries three spellings
-        # of one door-cleaning job. The most common spelling wins the label.
+        # of one door-cleaning job. The most common spelling wins the label,
+        # and a TIE is broken ALPHABETICALLY: `max` over a plain set returns
+        # whichever equal-count spelling the set happened to yield first,
+        # which for strings depends on PYTHONHASHSEED — so the published
+        # label flickered between builds (MCN EMB's "STC porter"/"STC Porter"
+        # and "Light strip adhesive removal"/"...removaL" are one job each).
+        # Only the label ever moved, since hours pool on the upper-cased key
+        # either way, but it put phantom rows in every build-to-build diff,
+        # which is what those diffs exist to catch.
         seen, rates, custom_jobs = {}, {}, {}
         if len(jobs):
             mine = jobs[jobs["Location"] == loc]
@@ -590,7 +598,7 @@ def mro_stations(cfgs, jobs):
         gmap, custom_group, gorder = _mro_group_map(loc)
         used_groups = []
         for key in sorted(seen):
-            label = max(set(seen[key]), key=seen[key].count)
+            label = max(sorted(set(seen[key])), key=seen[key].count)
             group = gmap.get(key)
             if group is None and custom_jobs.get(key):
                 group = custom_group     # every custom job lands in one row
