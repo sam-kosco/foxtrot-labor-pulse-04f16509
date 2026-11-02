@@ -989,8 +989,17 @@ def merge_budget_config(stations, budgets, catalog, overrides, index=None):
         services = []
         for svc_name, rate in rows:
             key = NORM(svc_name)
-            if key in ovr_services:
-                svc = dict(ovr_services[key])
+            # An override that names a `kind` REPLACES the template — that is
+            # what the spec pins (Ultra/Shroud) rely on. One that does not is
+            # read as a MODIFIER layered over whatever the catalog or
+            # stations.json already says, so recording a rate history or a
+            # start date needs only that one key. Before this, a partial
+            # override silently dropped `kind` and `aircraft` and the build
+            # died on a KeyError two functions later; all 54 overrides that
+            # existed when this landed name a kind, so none of them moved.
+            ovr_svc = ovr_services.get(key)
+            if ovr_svc is not None and "kind" in ovr_svc:
+                svc = dict(ovr_svc)
             elif key in base_by_name:
                 i, src = base_by_name[key]
                 svc = {k: v for k, v in src.items() if k != "sheet_row"}
@@ -1008,6 +1017,8 @@ def merge_budget_config(stations, budgets, catalog, overrides, index=None):
                 print(f"  !! {st_name}: unknown service {svc_name!r} — "
                       f"treating as flat daily budget")
                 svc = {"kind": "fixed", "aircraft": False}
+            if ovr_svc is not None and "kind" not in ovr_svc:
+                svc.update(ovr_svc)
             svc["name"], svc["rate"] = svc_name, rate
             services.append(svc)
         fac_only = all(s["kind"] == "fixed" for s in services)
@@ -1370,7 +1381,43 @@ def service_start(svc):
     return datetime.strptime(str(raw).strip(), "%Y-%m-%d").date()
 
 
-def dow_daily_rates(svc):
+def service_rates(svc, year, month, ndays):
+    """A service's rate on each day of the month, as a list indexed by day-1.
+
+    A rate is not a constant over the window. A contract gets renegotiated,
+    or a crew takes work over from a neighbouring dist — BNA FAC's facility
+    budget went from 46.8 h/day to 55 on 2026-11-01 when it absorbed
+    contracts from BNA PRIV, which is closing. `starts` cannot say this: it
+    zeroes a service before its date, which would erase April-October rather
+    than price it at the old figure.
+
+    `rate_before` in `station_overrides.json` is a {date: rate} map read as
+    "on the days BEFORE this date, the rate was that" — so the WORKBOOK cell
+    keeps its plain meaning, today's rate, and the override carries only the
+    history. Changing a rate is then: type the new number in Service
+    Budgets.xlsx, and add one line here saying what it was and when it
+    stopped. Several entries chain (the earliest date later than the day
+    wins), so a line that has moved twice reads in order.
+
+    Deliberately NOT inverted (a "rate_from" map naming the new value): the
+    workbook is the owner-editable control panel, and a scheme where editing
+    the cell silently did nothing because an override pinned the current rate
+    would be a trap.
+    """
+    base = svc.get("rate")
+    hist = svc.get("rate_before") or {}
+    if not hist:
+        return [base] * ndays
+    steps = sorted((datetime.strptime(str(k).strip(), "%Y-%m-%d").date(), v)
+                   for k, v in hist.items())
+    out = []
+    for d in range(1, ndays + 1):
+        day = date(year, month, d)
+        out.append(next((v for cut, v in steps if day < cut), base))
+    return out
+
+
+def dow_daily_rates(svc, rate=None):
     """Per-weekday hours for a fixed service that only runs on set days.
 
     FLL FAC's facility budget and STL AA CAB's mail run are the same shape -
@@ -1395,7 +1442,7 @@ def dow_daily_rates(svc):
         if unknown:
             raise SystemExit(f"{key} for {svc.get('name')!r} has unknown "
                              f"day(s) {sorted(unknown)}; use {DOW_NAMES}")
-    rate = float(svc.get("rate") or 0)
+    rate = float((svc.get("rate") if rate is None else rate) or 0)
     return [float(over[n]) if n in over
             else (rate if days_on and n in days_on else 0.0)
             for n in DOW_NAMES]
@@ -1684,16 +1731,22 @@ def station_budget(st_name, cfg, year, month, month_tbl, hours_start,
         uses_aa = any(sp["table"] == "AA_Debriefs"
                       for sp in svc.get("specs", []))
         starts = service_start(svc)
+        rates = service_rates(svc, year, month, ndays)
         if svc["kind"] == "fixed":
-            daily = dow_daily_rates(svc)
+            # One dow table per distinct rate: the weekday pattern is the
+            # same shape at either rate, only scaled.
+            dow = {}
             for d in days:
                 elapsed_day = is_past or d < cutoff
                 if not elapsed_day or (starts and
                                        date(year, month, d) < starts):
                     vals.append(0)
                     continue
-                v = (daily[date(year, month, d).weekday()] if daily
-                     else svc["rate"])
+                r = rates[d - 1]
+                if r not in dow:
+                    dow[r] = dow_daily_rates(svc, r)
+                daily = dow[r]
+                v = daily[date(year, month, d).weekday()] if daily else r
                 vals.append(round(v or 0, 2))
         else:
             by_day = spec_by_day(month_tbl, svc.get("specs") or [])
@@ -1702,7 +1755,6 @@ def station_budget(st_name, cfg, year, month, month_tbl, hours_start,
                     vals.append(0)
                     continue
                 vals.append(by_day.get(d, 0))
-        rate = svc.get("rate") or 0
         # Hours this service contributes, per day. Three ways to earn a
         # budget: a flat daily allowance, a rate per aircraft serviced,
         # and — where the work is priced per airframe rather than timed
@@ -1724,17 +1776,24 @@ def station_budget(st_name, cfg, year, month, month_tbl, hours_start,
                     hrs.append(0.0)
                     continue
                 tot = float(money_by_day.get(d, 0.0))
-                hrs.append(round(tot / rate, 2) if rate else 0.0)
+                r = rates[d - 1] or 0
+                hrs.append(round(tot / r, 2) if r else 0.0)
         elif svc["kind"] == "fixed":
             hrs = [round(v, 2) for v in vals]
         elif svc["kind"] == "revenue":
-            hrs = [round(v / rate, 2) if rate else 0.0 for v in vals]
+            hrs = [round(v / (r or 0), 2) if r else 0.0
+                   for v, r in zip(vals, rates)]
         else:
-            hrs = [round(v * rate, 2) for v in vals]
+            hrs = [round(v * (r or 0), 2) for v, r in zip(vals, rates)]
         for i, h in enumerate(hrs):
             budgeted[i] += h
+        # The rate in force at the month's END. For a change dated to the
+        # 1st — the only kind seen so far — that is the month's one rate.
+        # A mid-month change would show the new figure on the rates card
+        # while the hours honour both, which is the same point-in-time
+        # caveat that already drops the card for a multi-month period.
         svc_rows.append({"name": svc["name"], "kind": svc["kind"],
-                         "rate": rate, "days": vals, "hours": hrs,
+                         "rate": rates[-1], "days": vals, "hours": hrs,
                          "aircraft": svc.get("aircraft", False),
                          "uses_aa": uses_aa,
                          "group": svc.get("group"),
