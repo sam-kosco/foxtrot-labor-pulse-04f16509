@@ -1187,7 +1187,14 @@ def _purview_on(rows, d):
 
 
 def load_employees():
-    e = pd.read_csv(PAYLOCITY / "Basic Employee Info.csv", dtype=str, encoding="cp1252")
+    # Paylocity exports UTF-8, not cp1252 (2026-11-04). Read the wrong way
+    # it mostly mojibakes quietly - "Jose" with an acute e decoded to junk
+    # for months, harmless because every join here is on Employee Id and
+    # names only reach log lines. It crashed the first time a name hit one
+    # of the five bytes cp1252 leaves undefined: a capital A-acute is
+    # UTF-8 c3 81, and 0x81 is a hole, so 23 refreshes died decoding it.
+    e = pd.read_csv(PAYLOCITY / "Basic Employee Info.csv", dtype=str,
+                    encoding="utf-8-sig")
     e = e[~e["Job Title"].isin(EXCLUDED_TITLES)].copy()
     term = pd.to_datetime(e["Termination Date"], errors="coerce")
     active = e["Employee Status Description"].str.strip() == "Active"
@@ -1245,7 +1252,9 @@ def hours_file_updated():
 
 
 def load_hours(emp):
-    h = pd.read_csv(PAYLOCITY / "This Years Hours.csv", dtype=str, encoding="cp1252")
+    # UTF-8, same as the employee file above (and the same name in it).
+    h = pd.read_csv(PAYLOCITY / "This Years Hours.csv", dtype=str,
+                    encoding="utf-8-sig")
     # Paylocity renamed this column in the Aug 2026 export; accept either name
     if "Labor Dist Name" not in h.columns and "Cost Center 2 Name" in h.columns:
         h = h.rename(columns={"Cost Center 2 Name": "Labor Dist Name"})
