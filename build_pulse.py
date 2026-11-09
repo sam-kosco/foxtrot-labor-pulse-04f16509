@@ -1173,10 +1173,11 @@ def load_dist_changes():
     Same contract as Pay Type Changes above: rows STAY on the list after
     their Effective date (deleting one reverts every earlier month the day
     it lands), and Effective is hand-correctable to the date payroll agreed
-    rather than the day someone keyed it in. `From` is where they were
-    BEFORE that date and is the only side read - today's master says where
-    they are now - so a chain of moves takes one row each and the last
-    row's `To` is never consulted.
+    rather than the day someone keyed it in. BOTH sides are read: `From`
+    owns the days before Effective and `To` owns the days from it, so a row
+    takes effect the moment it is written rather than waiting for the
+    nightly Paylocity relay to agree with it. _dist_on says how the two
+    settle a disagreement.
     """
     path = DEFINITIVE_DIR / "Dist Changes.csv"
     out = {}
@@ -1187,24 +1188,48 @@ def load_dist_changes():
             eff = datetime.strptime((r["Effective"] or "").strip(),
                                     "%Y-%m-%d").date()
             frm = (r["From"] or "").strip().upper()
+            to = (r["To"] or "").strip().upper()
         except (KeyError, TypeError, ValueError):
             continue
-        if frm:
-            out.setdefault(_norm_eid(r["Employee Id"]), []).append((eff, frm))
+        if frm and to:
+            out.setdefault(_norm_eid(r["Employee Id"]),
+                           []).append((eff, frm, to))
     for rows in out.values():
         rows.sort()
     return out
 
 
 def _dist_on(current, hist, d):
-    """The labor dist an employee belonged to on date `d`. `hist` is their
-    ascending [(effective, from_dist)]: before the first transfer they were in
-    that row's `From`, between two they are in the later row's `From`, and
-    on/after the last one they are wherever the master says they are today."""
-    for eff, frm in hist or ():
+    """The labor dist an employee belonged to on date `d`.
+
+    `hist` is their ascending [(effective, from_dist, to_dist)]. Before the
+    first transfer they are in that row's `From`; from a transfer's Effective
+    date until the next one they are in its `To`.
+
+    The tail - on or after the last recorded move - is the only place the
+    employee master gets a say, and which one wins turns on whether Paylocity
+    has caught up (Sam, 2026-11-09, who was right to ask why November was
+    still reading LIT):
+
+      master == the last `To`    they agree; nothing to decide.
+      master == the last `From`  the row is AHEAD of Paylocity, the normal
+                                 state for a move keyed in before the next
+                                 relay. THE ROW WINS, so dating a transfer
+                                 moves the hours today instead of tomorrow.
+      master == neither          someone moved again and nobody wrote it
+                                 down. The master is the newer fact so it
+                                 wins, but the date it started is unknown -
+                                 load_employees shouts about it in the log.
+    """
+    now = str(current).strip().upper()
+    prev = None
+    for eff, frm, to in hist or ():
         if d < eff:
-            return frm
-    return str(current).strip().upper()
+            return prev[2] if prev else frm
+        prev = (eff, frm, to)
+    if prev is None:
+        return now
+    return prev[2] if now in (prev[1], prev[2]) else now
 
 
 def load_purview():
@@ -1309,22 +1334,27 @@ def load_employees():
     chg = load_dist_changes()
     e["dist_hist"] = [chg.get(_norm_eid(i), ()) for i in e["Employee Id"]]
     e["dists_ever"] = [
-        frozenset([str(d).strip().upper()] + [f for _, f in rows])
+        frozenset([str(d).strip().upper()]
+                  + [x for _, f, t in rows for x in (f, t)])
         for d, rows in zip(e["labor_dist"], e["dist_hist"])
     ]
     moved = int(sum(1 for r in e["dist_hist"] if r))
     if moved:
         def _chain(d, rows):
-            # The master's current dist closes the chain - unless it has not
-            # caught up yet, which is the normal state for a row added before
-            # the Paylocity relay lands (and would read "LIT -> LIT").
-            seen = [x for _, x in rows]
             now = str(d).strip().upper()
-            return " -> ".join(seen + ([now] if now != seen[-1] else ["(not "
-                                       "in Paylocity yet)"]))
+            eff, frm, to = rows[-1]
+            if now == to:
+                tail = ""
+            elif now == frm:
+                tail = " [Paylocity not caught up yet; the row wins]"
+            else:
+                tail = (f" !! MASTER SAYS {now}: an unrecorded move, counted"
+                        " from an unknown date - give it a row")
+            return (" -> ".join([rows[0][1]] + [t for _, _, t in rows])
+                    + f" from {eff:%Y-%m-%d}{tail}")
 
         who = "; ".join(
-            f"{f} {l}: {_chain(d, rows)} from {rows[-1][0]:%Y-%m-%d}"
+            f"{f} {l}: {_chain(d, rows)}"
             for f, l, d, rows in zip(e["First Name"], e["Last Name"],
                                      e["labor_dist"], e["dist_hist"]) if rows)
         print(f"dist changes: {moved} dated transfer(s) ({who})")

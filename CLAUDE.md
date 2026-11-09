@@ -95,10 +95,15 @@ on GitHub serving the commit, not our code.
   employee master carries only TODAY's labor dist and the salaried imputation
   reads it for every month in the window, so moving someone silently rewrote
   closed months. `Definitive Lists/Dist Changes.csv` dates each move — `From`
-  is where they were BEFORE `Effective`, today's master is where they are now
-  (so a chain of moves takes one row each and the last row's `To` is never
-  read), and rows STAY after their date for the same reason Pay Type Changes
-  rows do. Found on Riley Pinterich again (Sam, 2026-11-09): LIT CABIN → SLN
+  owns the days before `Effective` and `To` owns the days from it, so a row
+  bites the moment it is written instead of waiting for the next Paylocity
+  relay to agree (Sam caught this the same day: November was still reading
+  LIT because the first cut let the master win the tail). The master only
+  settles dates after the LAST recorded move, and only when it agrees with
+  that row or is still behind it - a master that matches neither side means
+  somebody moved again unrecorded, which wins on recency and is shouted
+  about in the build log. Rows STAY after their date for the same reason Pay
+  Type Changes rows do. Found on Riley Pinterich again (Sam, 2026-11-09): LIT CABIN → SLN
   MRO effective 11/01 would have carried her whole October imputation to SLN,
   taking LIT from 98.9% to 84.1% of budget and handing SLN 177 h it never
   worked — she is the only salaried head either page has, so it was 100% of
