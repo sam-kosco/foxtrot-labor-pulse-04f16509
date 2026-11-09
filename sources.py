@@ -48,6 +48,10 @@ SOURCE_FILES = [
     # pay as salary until a later pay period — the pulse counts these people
     # hourly until their Effective date (Sam, 2026-09-23).
     "Definitive Lists/Pay Type Changes.csv",
+    # Dated labor-dist transfers. The employee master holds only today's dist
+    # and the salaried imputation reads it for every month in the window, so
+    # without this a transfer rewrites closed months (Sam, 2026-11-09).
+    "Definitive Lists/Dist Changes.csv",
     # The labor dists under each manager on the org chart, published hourly by
     # the Foxtrot Platform (engine/purview.py). A salaried manager over 2+
     # pulse pages has their 40 h/week split across them (Sam, 2026-10-21).

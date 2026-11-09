@@ -1154,6 +1154,59 @@ def load_pay_type_changes():
     return out
 
 
+def load_dist_changes():
+    """Employee id -> [(effective, from_dist)] ascending: a dated history of
+    labor-dist transfers, from `Definitive Lists/Dist Changes.csv`.
+
+    The employee master carries only TODAY's labor dist, and the salaried
+    imputation reads it for every month in the window - so a transfer
+    silently rewrote history. Sam, 2026-11-09: Riley Pinterich moved LIT
+    CABIN -> SLN MRO effective 11/01, which would have carried her WHOLE
+    October imputation to SLN, taking LIT from 98.9% to 84.1% and handing
+    SLN 177 h it never worked. She is the only salaried head either page
+    has, so that was 100% of LIT's October imputation and all of SLN's.
+
+    Hourly punches need none of this - every row in the hours file carries
+    its own Labor Dist Name, which is why her April-August still reads XNA
+    CABIN. This is the salaried side alone.
+
+    Same contract as Pay Type Changes above: rows STAY on the list after
+    their Effective date (deleting one reverts every earlier month the day
+    it lands), and Effective is hand-correctable to the date payroll agreed
+    rather than the day someone keyed it in. `From` is where they were
+    BEFORE that date and is the only side read - today's master says where
+    they are now - so a chain of moves takes one row each and the last
+    row's `To` is never consulted.
+    """
+    path = DEFINITIVE_DIR / "Dist Changes.csv"
+    out = {}
+    if not path.exists():
+        return out
+    for _, r in pd.read_csv(path, dtype=str, encoding="utf-8-sig").iterrows():
+        try:
+            eff = datetime.strptime((r["Effective"] or "").strip(),
+                                    "%Y-%m-%d").date()
+            frm = (r["From"] or "").strip().upper()
+        except (KeyError, TypeError, ValueError):
+            continue
+        if frm:
+            out.setdefault(_norm_eid(r["Employee Id"]), []).append((eff, frm))
+    for rows in out.values():
+        rows.sort()
+    return out
+
+
+def _dist_on(current, hist, d):
+    """The labor dist an employee belonged to on date `d`. `hist` is their
+    ascending [(effective, from_dist)]: before the first transfer they were in
+    that row's `From`, between two they are in the later row's `From`, and
+    on/after the last one they are wherever the master says they are today."""
+    for eff, frm in hist or ():
+        if d < eff:
+            return frm
+    return str(current).strip().upper()
+
+
 def load_purview():
     """Employee id -> [(from, to, dists)]: the labor dists under them on the
     org chart (their own included) and the dates each set applied, from
@@ -1214,6 +1267,22 @@ def load_employees():
     if capped:
         print(f"early terminations: capped last_day for {capped} "
               f"form-termed people Paylocity still shows Active")
+    # The floor last_day never had. last_day caps when someone STOPS counting
+    # and salary_from when they start being SALARIED, but nothing capped when
+    # they started existing - so a brand-new hire imputed 40/7 h/day back to
+    # WINDOW_START. Sam, 2026-11-09: Nolen Jones was hired 11/04 into STL AA
+    # ULTRA and was already carrying June through October, 150 h of a month
+    # he was not employed for. `Most Recent Hire Date` is the current stint
+    # and is the later of the two dates by definition; the original is the
+    # fallback when it is blank. An unreadable date floors nothing, which
+    # counts the person - the same safe direction salary_from takes.
+    mrh = pd.to_datetime(e["Most Recent Hire Date"], errors="coerce")
+    orig = pd.to_datetime(e["Hire Date"], errors="coerce")
+    e["first_day"] = [
+        (h if pd.notna(h) else o).date() if (pd.notna(h) or pd.notna(o))
+        else None
+        for h, o in zip(mrh, orig)
+    ]
     e["labor_dist"] = e["Labor Dist Description"].fillna("").str.strip()
     e["pay_type"] = e["Pay Type Code"].fillna("").str.strip()
     e["id"] = e["Employee Id"].str.strip()
@@ -1233,6 +1302,32 @@ def load_employees():
             if v is not None)
         print(f"pay type changes: {deferred} promotion(s) not yet in effect, "
               f"still counted hourly ({who})")
+    # Dated labor-dist history (load_dist_changes). `dists_ever` is every dist
+    # a person has ever belonged to, so worked_hours can still FIND someone
+    # who has since transferred away; `dist_hist` then decides which dist owns
+    # each individual day.
+    chg = load_dist_changes()
+    e["dist_hist"] = [chg.get(_norm_eid(i), ()) for i in e["Employee Id"]]
+    e["dists_ever"] = [
+        frozenset([str(d).strip().upper()] + [f for _, f in rows])
+        for d, rows in zip(e["labor_dist"], e["dist_hist"])
+    ]
+    moved = int(sum(1 for r in e["dist_hist"] if r))
+    if moved:
+        def _chain(d, rows):
+            # The master's current dist closes the chain - unless it has not
+            # caught up yet, which is the normal state for a row added before
+            # the Paylocity relay lands (and would read "LIT -> LIT").
+            seen = [x for _, x in rows]
+            now = str(d).strip().upper()
+            return " -> ".join(seen + ([now] if now != seen[-1] else ["(not "
+                                       "in Paylocity yet)"]))
+
+        who = "; ".join(
+            f"{f} {l}: {_chain(d, rows)} from {rows[-1][0]:%Y-%m-%d}"
+            for f, l, d, rows in zip(e["First Name"], e["Last Name"],
+                                     e["labor_dist"], e["dist_hist"]) if rows)
+        print(f"dist changes: {moved} dated transfer(s) ({who})")
     return e
 
 
@@ -1646,8 +1741,13 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
     split = split or {}
     sal_counts = [0] * ndays
     for skey in skeys:
+        # Candidates are everyone who has EVER been in this dist, not whoever
+        # is in it today: someone who transferred away still owes this page
+        # the days before they moved, and someone who transferred in owes
+        # their old page the days before that. _dist_on settles which dist
+        # owns each day (load_dist_changes).
         sal_emp = emp[(emp["pay_type"] == "Salary")
-                      & (emp["labor_dist"].str.upper() == skey)]
+                      & emp["dists_ever"].map(lambda s, k=skey: k in s)]
         if sal_emp.empty:
             continue
         for i, dnum in enumerate(days):
@@ -1655,10 +1755,14 @@ def worked_hours(cfg, hsel_shift, hsel_plain, emp, year, month, ndays,
                 continue
             cut = date(year, month, dnum)
             sal_counts[i] += sum(
-                1 for eid, ld, sf in zip(sal_emp["id"], sal_emp["last_day"],
-                                         sal_emp["salary_from"])
+                1 for eid, ld, sf, fd, cd, hist in zip(
+                    sal_emp["id"], sal_emp["last_day"], sal_emp["salary_from"],
+                    sal_emp["first_day"], sal_emp["labor_dist"],
+                    sal_emp["dist_hist"])
                 if ld and ld > cut and (sf is None or cut >= sf)
-                and cut not in split.get(eid, ()))
+                and (fd is None or cut >= fd)
+                and cut not in split.get(eid, ())
+                and _dist_on(cd, hist, cut) == skey)
     split_h = [float((extra or {}).get(date(year, month, d), 0.0)) for d in days]
     # Pre-launch labor (before this station's first debrief) is
     # implementation/training — zero it out rather than score it.
@@ -1924,15 +2028,18 @@ def salary_split(stations, emp, purview, budgets_by_month, hours_start):
 
     split, extra, people = {}, {}, []
     sal = emp[emp["pay_type"] == "Salary"]
-    for eid, first, last, title, home, ld, sf in zip(
+    for eid, first, last, title, home, ld, sf, fd in zip(
             sal["id"], sal["First Name"], sal["Last Name"], sal["Job Title"],
-            sal["labor_dist"], sal["last_day"], sal["salary_from"]):
+            sal["labor_dist"], sal["last_day"], sal["salary_from"],
+            sal["first_day"]):
         rows = purview.get(_norm_eid(eid))
         if not rows:
             continue
         days = set()
         for d in all_days:
-            if d < SPLIT_START or not (ld and ld > d and (sf is None or d >= sf)):
+            if d < SPLIT_START or not (ld and ld > d
+                                       and (sf is None or d >= sf)
+                                       and (fd is None or d >= fd)):
                 continue
             pages = pages_of(_purview_on(rows, d))
             if len(pages) < 2:
@@ -2161,6 +2268,7 @@ def check_sources_present():
              "Misc Work.json": BUDGETS_DIR,
              "Early Terminations.csv": DEFINITIVE_DIR,
              "Pay Type Changes.csv": DEFINITIVE_DIR,
+             "Dist Changes.csv": DEFINITIVE_DIR,
              "Salaried Purview.csv": DEFINITIVE_DIR}
     from sources import SOURCE_FOLDERS
     missing = [n for n in SOURCE_NAMES if not (roots.get(n, DEBRIEFS) / n).exists()]
