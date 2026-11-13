@@ -52,6 +52,11 @@ SOURCE_FILES = [
     # and the salaried imputation reads it for every month in the window, so
     # without this a transfer rewrites closed months (Sam, 2026-11-09).
     "Definitive Lists/Dist Changes.csv",
+    # Single punches whose labor dist was keyed to the wrong cost centre and
+    # that payroll can no longer fix, because the pay period has closed
+    # (Sam, 2026-11-13). Last resort - the fix belongs in Paylocity when that
+    # is still possible.
+    "Definitive Lists/Punch Corrections.csv",
     # The labor dists under each manager on the org chart, published hourly by
     # the Foxtrot Platform (engine/purview.py). A salaried manager over 2+
     # pulse pages has their 40 h/week split across them (Sam, 2026-10-21).

@@ -113,6 +113,26 @@ on GitHub serving the commit, not our code.
   therefore draws candidates from everyone who has EVER been in a dist
   (`dists_ever`, so a page still gets the days before someone left it) and
   `_dist_on` settles which dist owns each individual day.
+- **A single punch's cost centre can be corrected after payroll closes**
+  (`Definitive Lists/Punch Corrections.csv`, Sam 2026-11-13). Last resort,
+  not a convenience: a wrong dist belongs in Paylocity, where fixing it also
+  corrects payroll and everything else downstream. This file is for when that
+  door has shut. Nine `DFW WIDEBODY` aircraft technicians worked a 12 h push
+  on 2026-11-10 that was keyed to `DFW CABIN`, and it surfaced after the pay
+  period closed. Left alone it put **108.58 h on the wrong page AND the wrong
+  day**: DFW CABIN takes the 12 h shift-back, so their 9:56 AM start credited
+  **Nov 9**, while DFW WIDEBODY is a `plain_day_dists` day crew that would
+  have taken Nov 10. Correcting the dist moves both, because `worked_hours`
+  picks the attribution FROM the dist — DFW CABIN Nov 9 263.4 → 154.8 and DFW
+  WIDEBODY Nov 10 45.2 → 153.8, conserved to the cent with no other day
+  touched. **The export carries no punch id**, so a punch is keyed by employee
+  id + work date + punch-in MINUTE — nobody punches in twice in the same
+  minute, and all three come straight off the row, so the key cannot drift the
+  way a row number would. `From Dist` is verified before anything is swapped,
+  which makes a row **self-retiring**: if Paylocity is ever fixed upstream the
+  punch already reads `To Dist`, the row stops applying instead of swapping it
+  back, and the build says so. A row matching no punch at all is announced in
+  the log rather than silently passed over — that is what a typo looks like.
 - **Nobody imputes salaried time before they were hired** (`first_day`, Sam
   2026-11-09 — "I thought we had one"). `last_day` capped when a salaried head
   STOPS counting and `salary_from` when they start being SALARIED, but nothing

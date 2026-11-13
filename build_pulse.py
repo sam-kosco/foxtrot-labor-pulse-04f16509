@@ -1199,6 +1199,52 @@ def load_dist_changes():
     return out
 
 
+def load_punch_corrections():
+    """(employee id, work date, punch-in HH:MM) -> (from_dist, to_dist): single
+    punches whose labor dist was keyed to the wrong cost centre and that
+    payroll can no longer fix, from `Definitive Lists/Punch Corrections.csv`.
+
+    This is the last resort, not a convenience. A punch's dist is normally
+    right, and when it is wrong the fix belongs in Paylocity, where it also
+    corrects payroll, reporting and anything else downstream. The file exists
+    for the case where that door has shut: Sam, 2026-11-13 - nine DFW
+    WIDEBODY technicians worked a 12 h push on 2026-11-10 that was keyed to
+    DFW CABIN, and by the time it surfaced the pay period had closed. Left
+    alone it put 108.58 h on the wrong page AND the wrong day, because DFW
+    CABIN takes the 12 h shift-back (a 9:56 AM start credits the previous
+    day) while DFW WIDEBODY is a `plain_day_dists` day crew. Correcting the
+    dist moves both, since worked_hours picks the attribution from the dist.
+
+    The export carries no punch id - the columns are employee, name, work
+    scope, work date, the duration sums, base rate, punch in/out and labor
+    dist - so a punch is identified by WHO, WHICH WORK DATE and the MINUTE
+    they punched in. Nobody punches in twice in the same minute, and all
+    three come straight off the row, so the key cannot drift the way a row
+    number would.
+
+    `From Dist` is checked before anything is swapped, which makes a row
+    self-retiring: if Paylocity is ever fixed upstream the punch already
+    reads `To Dist`, the row stops applying instead of swapping it back, and
+    the build says so. A row that matches no punch at all is announced
+    rather than passed over - that is what a typo looks like.
+    """
+    path = DEFINITIVE_DIR / "Punch Corrections.csv"
+    out = {}
+    if not path.exists():
+        return out
+    for _, r in pd.read_csv(path, dtype=str, encoding="utf-8-sig").iterrows():
+        try:
+            wd = pd.to_datetime(r["Work Date"], errors="raise").date()
+            hm = pd.to_datetime(r["Punch In"], errors="raise").strftime("%H:%M")
+            frm = (r["From Dist"] or "").strip().upper()
+            to = (r["To Dist"] or "").strip().upper()
+        except (KeyError, TypeError, ValueError):
+            continue
+        if frm and to:
+            out[(_norm_eid(r["Employee Id"]), wd, hm)] = (frm, to)
+    return out
+
+
 def _dist_on(current, hist, d):
     """The labor dist an employee belonged to on date `d`.
 
@@ -1439,6 +1485,38 @@ def load_hours(emp):
     h["labor_dist"] = [
         id2dist.get(i, "") if r == "Not Defined" else r for i, r in zip(eid, raw)
     ]
+    # Hand-corrected punches (load_punch_corrections) win over both the
+    # export and the "Not Defined" repair above - they are the last word on
+    # a punch whose cost centre payroll can no longer fix.
+    corr = load_punch_corrections()
+    if corr:
+        dists = list(h["labor_dist"])
+        keys = [(_norm_eid(i), w, p.strftime("%H:%M") if pd.notna(p) else "")
+                for i, w, p in zip(eid, h["work_date"], punch)]
+        done, inert, odd, seen = 0, 0, [], set()
+        for ix, (k, cur) in enumerate(zip(keys, dists)):
+            rule = corr.get(k)
+            if rule is None:
+                continue
+            seen.add(k)
+            frm, to = rule
+            if str(cur).strip().upper() == frm:
+                dists[ix] = to
+                done += 1
+            elif str(cur).strip().upper() == to:
+                inert += 1
+            else:
+                odd.append(f"{k[0]} {k[1]} {k[2]}: expected {frm}, "
+                           f"found {str(cur).strip().upper() or 'blank'}")
+        h["labor_dist"] = dists
+        missing = [k for k in corr if k not in seen]
+        print(f"  punch corrections: {done} applied, {inert} already fixed "
+              f"upstream, {len(missing)} unmatched of {len(corr)}")
+        for m in missing:
+            print(f"  !! punch correction matches no punch: {m[0]} {m[1]} "
+                  f"{m[2]} - check the id, work date and punch-in minute")
+        for o in odd:
+            print(f"  !! punch correction left alone, {o}")
     h["pay_type"] = eid.map(id2pay).fillna("")
     # A promotion that has not taken effect yet: these punches are hourly work
     # and must be counted as such (see load_pay_type_changes).
@@ -2299,6 +2377,7 @@ def check_sources_present():
              "Early Terminations.csv": DEFINITIVE_DIR,
              "Pay Type Changes.csv": DEFINITIVE_DIR,
              "Dist Changes.csv": DEFINITIVE_DIR,
+             "Punch Corrections.csv": DEFINITIVE_DIR,
              "Salaried Purview.csv": DEFINITIVE_DIR}
     from sources import SOURCE_FOLDERS
     missing = [n for n in SOURCE_NAMES if not (roots.get(n, DEBRIEFS) / n).exists()]
