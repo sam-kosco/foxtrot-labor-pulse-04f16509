@@ -1192,6 +1192,10 @@
   },
   "hours_from_first_debrief": true
  },
+ "GRR PRIV": {
+  "scored_from": "2026-12-01",
+  "_comment": "New 2026-11-17: janitorial facility contract at Gerald R. Ford International Airport (Grand Rapids). Named PRIV after its Labor Dist but run as a facility (Locations row: Attribution day). Go-live 12/1 for now (Sam), so nothing is scored before then - Taylor Ries (GM) moves into the dist while still training at DTW, and her salaried hours must not score against an empty budget. The Facility Budget row starts at 0 until the staffing plan is set. Move this date if the start moves."
+ },
  "IAD CABIN": {
   "_comment": "New 2026-10-19 on the IAH Mesa/Republic contract. Counts no labor before its first debrief; Mesa services resolve from the catalog with Location=IAD. Labor dist IAD CABIN by convention.",
   "hours_from_first_debrief": true
