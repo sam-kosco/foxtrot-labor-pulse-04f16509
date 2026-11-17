@@ -216,7 +216,10 @@ def load_widebody():
 
 AA_JOB_TYPES = {"DTC": "AA Turn", "RSTC": "AA Turn", "RON": "AA RON",
                 "RRON": "AA RON", "Security": "AA Security",
-                "Ultra": "Ultra", "Shroud": "Shroud Cleaning"}
+                "Ultra": "Ultra", "Shroud": "Shroud Cleaning",
+                # Airsickness/Biohazard cleanups: $30 each in AA Debriefs, budgeted
+                # 1 h per job on STL AA CAB / PVD AA CAB (Sam, 2026-11-17).
+                "Airsickness/Biohazard": "Airsickness"}
 
 
 def load_aa():

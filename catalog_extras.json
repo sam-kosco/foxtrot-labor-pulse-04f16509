@@ -426,5 +426,27 @@
     "name": "Breeze Facility Budget",
     "kind": "fixed",
     "aircraft": false
+  },
+  "airsickness": {
+    "name": "Airsickness",
+    "kind": "count",
+    "aircraft": false,
+    "specs": [
+      {
+        "fn": "COUNTIFS",
+        "table": "AA_Debriefs",
+        "sum_col": null,
+        "criteria": [
+          [
+            "Station",
+            "{LOC}"
+          ],
+          [
+            "Service",
+            "Airsickness"
+          ]
+        ]
+      }
+    ]
   }
 }
