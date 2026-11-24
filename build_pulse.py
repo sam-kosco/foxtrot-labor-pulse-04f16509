@@ -1691,15 +1691,26 @@ def aa_missing_days(aa_full, year, month, upto_day):
     return out
 
 
-def first_debrief_dates(stations, tables):
-    """Earliest date each flagged station has a counted service on.
+def first_debrief_dates(stations, tables, misc=()):
+    """Earliest date each flagged station has RECORDED WORK on.
 
     Stations carrying `hours_from_first_debrief` only start counting labor from
-    their first real debrief: the hours before that are implementation and
+    their first real work: the hours before that are implementation and
     training for a contract that hadn't started, and shouldn't score against
-    the station. Derived from the debrief data (not a hardcoded date) so it
-    corrects itself as debriefs land or are backfilled.
+    the station. Derived from the data (not a hardcoded date) so it corrects
+    itself as work lands or is backfilled.
+
+    Hand-logged MISC entries count as first work too (Sam, 2026-11-24): CVG
+    FEAM's board has no scheduled plane jobs — everything there is logged as
+    misc — so deriving the launch from jobs alone left the station gated
+    forever and the launch gate zeroed the very misc rows that proved it was
+    live. A location's first recorded work opens it, whichever form it took.
     """
+    first_misc = {}
+    for e in misc:
+        loc = e["location"]
+        if loc not in first_misc or e["start"] < first_misc[loc]:
+            first_misc[loc] = e["start"]
     out = {}
     for st_name, cfg in stations.items():
         if not cfg.get("hours_from_first_debrief"):
@@ -1717,11 +1728,14 @@ def first_debrief_dates(stations, tables):
                 dates = [d for d in t.loc[m, "date"] if d is not None]
                 if dates and (best is None or min(dates) < best):
                     best = min(dates)
+        fm = first_misc.get(st_name)
+        if fm is not None and (best is None or fm < best):
+            best = fm
         out[st_name] = best
         if best:
-            print(f"  {st_name}: labor counted from first debrief {best}")
+            print(f"  {st_name}: labor counted from first recorded work {best}")
         else:
-            print(f"  !! {st_name}: no debriefs at all — all labor suppressed")
+            print(f"  !! {st_name}: no recorded work at all — all labor suppressed")
     return out
 
 
@@ -2445,7 +2459,7 @@ def main():
     closeout = load_closeout()
     apply_double_debriefs(tables, closeout)
     misc = load_misc_work()
-    hours_start = first_debrief_dates(stations, tables)
+    hours_start = first_debrief_dates(stations, tables, misc)
     for st_name, cfg in stations.items():
         raw = cfg.get("scored_from")
         if raw:
