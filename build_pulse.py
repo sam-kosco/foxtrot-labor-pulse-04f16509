@@ -1077,6 +1077,9 @@ def merge_budget_config(stations, budgets, catalog, overrides, index=None):
                            "scored_from": ovr.get("scored_from"),
                            "labor_from_first_debrief":
                                ovr.get("labor_from_first_debrief"),
+                           # Fixed-date sibling: {dist: "YYYY-MM-DD"} for a
+                           # dist that joins an existing page on a chosen day.
+                           "labor_from": ovr.get("labor_from"),
                            "shift_window": shift_window,
                            "plain_day_dists": plain_day_dists,
                            # Collapsible service groups: the order they render
@@ -1756,10 +1759,18 @@ def labor_gate_dates(stations, tables):
     out = {}
     for st_name, cfg in stations.items():
         rules = cfg.get("labor_from_first_debrief") or {}
-        if not rules:
+        # `labor_from` is the fixed-date sibling: {dist: "YYYY-MM-DD"} for a
+        # dist that JOINS an existing page on a chosen day (Sam, 2026-11-24 —
+        # CVG FEAM folds into CVG CABIN as of October; its Apr–Sep hours were
+        # never scored anywhere and must not restate CABIN's history).
+        fixed = cfg.get("labor_from") or {}
+        if not rules and not fixed:
             continue
         by_key = {NORM(s["name"]): s for s in cfg["services"]}
         gates = {}
+        for dist, day in fixed.items():
+            gates[dist.upper()] = date.fromisoformat(str(day))
+            print(f"  {st_name}: {dist} labor counted from {day} (fixed)")
         for dist, svc_keys in rules.items():
             best = None
             for k in svc_keys:

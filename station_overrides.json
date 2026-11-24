@@ -356,7 +356,11 @@
     ],
     "starts": "2026-09-14"
    }
-  }
+  },
+  "labor_from": {
+   "CVG FEAM": "2026-10-01"
+  },
+  "_comment_feam": "CVG FEAM folded into this page 2026-11-24 (Sam): its own pulse page and MRO board are retired, FEAM work is logged here as misc, and the dist joins as of October \u2014 Apr-Sep FEAM hours were never scored anywhere and must not restate this page."
  },
  "DAL PRIV": {
   "_comment": "Split out of the pooled DFW-DAL page on 2026-10-20 (Sam). While pooled, DAL's launch was gated per-dist via DFW-DAL's labor_from_first_debrief, because a station-wide gate there would have erased every DFW hour before DAL's first JSX debrief. Standing alone it takes the ordinary station gate instead. EXPECT THIS PAGE TO READ OVER: 7 JSX debrief rows of budget against one salaried head imputed at 5.71 h/day, with no hourly punches since the gate date. That is a staffing picture, not an over-run.",
@@ -411,7 +415,7 @@
  },
  "DFW WIDEBODY": {
   "hours_from_first_debrief": true,
-  "_comment": "Widebody split out of DFW-DAL (Sam, 2026-09-28): its own page so the widebody turn budget is scored against the widebody crew's hours instead of being averaged into the DFW-DAL pool. The Service Budgets sheet is 'DFW WIDEBODY' (matching the labor dist); the page is titled DFW WIDE via `display`. Sheet name starts 'DFW', so {LOC} resolves to DFW and the catalog's widebodyturns template counts Widebody_Debriefs rows for Location DFW with no override needed. hours_from_first_debrief (Sam, 2026-09-28): no labor counts before the station's first widebody debrief — the crew's hours before the first turn are ramp-up, and scoring them against a budget that does not exist yet would show the page as massively over. While Widebody Debriefs.xlsx is still empty this suppresses every hour, so the page reads 0/0 until the first turn lands and then starts counting from that day. plain_day_dists repeats here because the crew never works past midnight — a day shift must not be shifted back 12 h onto the previous day."
+  "_comment": "Widebody split out of DFW-DAL (Sam, 2026-09-28): its own page so the widebody turn budget is scored against the widebody crew's hours instead of being averaged into the DFW-DAL pool. The Service Budgets sheet is 'DFW WIDEBODY' (matching the labor dist); the page is titled DFW WIDE via `display`. Sheet name starts 'DFW', so {LOC} resolves to DFW and the catalog's widebodyturns template counts Widebody_Debriefs rows for Location DFW with no override needed. hours_from_first_debrief (Sam, 2026-09-28): no labor counts before the station's first widebody debrief \u2014 the crew's hours before the first turn are ramp-up, and scoring them against a budget that does not exist yet would show the page as massively over. While Widebody Debriefs.xlsx is still empty this suppresses every hour, so the page reads 0/0 until the first turn lands and then starts counting from that day. plain_day_dists repeats here because the crew never works past midnight \u2014 a day shift must not be shifted back 12 h onto the previous day."
  },
  "FLL": {
   "group_order": [
